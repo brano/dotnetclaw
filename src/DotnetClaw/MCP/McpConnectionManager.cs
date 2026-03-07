@@ -3,7 +3,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using ModelContextProtocol.Client;
-using ModelContextProtocol.Protocol.Transport;
 
 namespace DotnetClaw.Mcp;
 
@@ -29,9 +28,9 @@ public sealed record McpServerStatus
 /// <summary>
 /// Manages the lifecycle of all configured MCP server connections.
 ///
-/// Responsibilities:
-///   • Connect to every enabled server at startup (stdio process launch or SSE HTTP)
-///   • Expose a thread-safe dictionary of live <see cref="IMcpClient"/> instances
+    /// Responsibilities:
+    ///   • Connect to every enabled server at startup (stdio process launch or SSE HTTP)
+    ///   • Expose a thread-safe dictionary of live <see cref="IMcpClient"/> sessions
 ///   • Support per-server reconnect without restarting the whole process
 ///   • Dispose all clients gracefully on shutdown
 ///
@@ -202,7 +201,7 @@ public sealed class McpConnectionManager(
             Command = config.Command,
             Arguments = config.Arguments,
             EnvironmentVariables = config.Environment.Count > 0
-                ? config.Environment
+                ? config.Environment.ToDictionary(kvp => kvp.Key, kvp => (string?)kvp.Value)
                 : null,
             WorkingDirectory = string.IsNullOrWhiteSpace(config.WorkingDirectory)
                 ? null
@@ -210,20 +209,22 @@ public sealed class McpConnectionManager(
         };
 
         var transport = new StdioClientTransport(transportOptions);
-        return await McpClientFactory.CreateAsync(transport, cancellationToken: cancellationToken);
+        var sdkClient = await McpClient.CreateAsync(transport, cancellationToken: cancellationToken);
+        return new McpClientAdapter(sdkClient);
     }
 
     private static async Task<IMcpClient> ConnectSseAsync(
         McpServerConfig config,
         CancellationToken cancellationToken)
     {
-        var transportOptions = new SseClientTransportOptions
+        var transportOptions = new HttpClientTransportOptions
         {
             Endpoint = new Uri(config.Url),
         };
 
-        var transport = new SseClientTransport(transportOptions);
-        return await McpClientFactory.CreateAsync(transport, cancellationToken: cancellationToken);
+        var transport = new HttpClientTransport(transportOptions);
+        var sdkClient = await McpClient.CreateAsync(transport, cancellationToken: cancellationToken);
+        return new McpClientAdapter(sdkClient);
     }
 
     private McpServerStatus RecordFailure(McpServerConfig config, string error)

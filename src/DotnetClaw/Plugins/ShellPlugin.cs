@@ -41,7 +41,7 @@ public sealed class ShellPlugin(
     {
         var effectiveDir = ResolveDirectory(workingDirectory);
         var guardResult = CheckCommandSafety(command);
-        if (!guardResult.IsAllowed)
+        if (guardResult.IsAllowed != CommandSafetyResult.Allow)
         {
             logger.LogWarning("Blocked shell command: {Command} — reason: {Reason}", command, guardResult.Reason);
             return ShellResult.Blocked(command, guardResult.Reason);

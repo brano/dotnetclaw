@@ -63,12 +63,12 @@ public sealed class McpKernelLoader(
             var pluginName = $"Mcp_{SanitiseName(name)}";
             try
             {
-                // Microsoft.SemanticKernel.Plugins.MCP extension:
-                // Converts each MCP tool schema into a KernelFunction with the correct
-                // parameter descriptions and return type, then wraps them in a KernelPlugin.
-                var plugin = await client.AsKernelPluginAsync(
+                // In MCP SDK 1.x each McpClientTool extends AIFunction.
+                // AsKernelFunction() (from Microsoft.SemanticKernel.Core) converts it to a KernelFunction.
+                var tools = await client.ListToolsAsync(cancellationToken: cancellationToken);
+                var plugin = KernelPluginFactory.CreateFromFunctions(
                     pluginName,
-                    cancellationToken: cancellationToken);
+                    tools.Select(t => t.AsKernelFunction()));
 
                 kernel.Plugins.Add(plugin);
 
@@ -121,7 +121,10 @@ public sealed class McpKernelLoader(
 
         try
         {
-            var plugin = await client.AsKernelPluginAsync(pluginName, cancellationToken: cancellationToken);
+            var tools = await client.ListToolsAsync(cancellationToken: cancellationToken);
+            var plugin = KernelPluginFactory.CreateFromFunctions(
+                pluginName,
+                tools.Select(t => t.AsKernelFunction()));
             kernel.Plugins.Add(plugin);
             logger.LogInformation(
                 "McpKernelLoader: Reloaded '{Plugin}' with {Count} function(s).",

@@ -8,7 +8,7 @@ namespace DotnetClaw.Browser;
 /// Production <see cref="IBrowserSession"/> backed by a Playwright <see cref="IPage"/>.
 /// One instance wraps one browser tab.  Disposed by <see cref="BrowserSessionManager"/>.
 /// </summary>
-public sealed class PlaywrightBrowserSession : IBrowserSession
+public class PlaywrightBrowserSession : IBrowserSession
 {
     private readonly IPage _page;
     private readonly BrowserOptions _options;
@@ -28,7 +28,7 @@ public sealed class PlaywrightBrowserSession : IBrowserSession
     // ── IBrowserSession ───────────────────────────────────────────────────────
 
     public string CurrentUrl   => _page.Url;
-    public string CurrentTitle => _page.Title().GetAwaiter().GetResult();
+    public string CurrentTitle => _page.TitleAsync().GetAwaiter().GetResult();
 
     public async Task<BrowserNavigateResult> NavigateAsync(
         string url,

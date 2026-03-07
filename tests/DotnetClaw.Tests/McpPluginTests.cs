@@ -1,10 +1,13 @@
+using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
 using DotnetClaw.Config;
 using DotnetClaw.Mcp;
 using DotnetClaw.Plugins;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.SemanticKernel;
 using ModelContextProtocol.Client;
-using ModelContextProtocol.Protocol.Types;
+using ModelContextProtocol.Protocol;
 using Moq;
 using Xunit;
 
@@ -12,7 +15,7 @@ namespace DotnetClaw.Tests;
 
 // ============================================================================
 //  McpPlugin Tests
-//  Uses Moq to mock IMcpClient and McpConnectionManager — no real MCP servers.
+//  Uses Moq to mock McpConnectionManager and IMcpClient — no real MCP servers.
 // ============================================================================
 
 public class McpPluginTests
@@ -124,7 +127,7 @@ public class McpPluginTests
         };
 
         var clientMock = new Mock<IMcpClient>();
-        clientMock.Setup(c => c.ListToolsAsync(null, It.IsAny<CancellationToken>()))
+        clientMock.Setup(c => c.ListToolsAsync(It.IsAny<CancellationToken>()))
                   .ReturnsAsync(tools);
 
         var mgr = new Mock<McpConnectionManager>(
@@ -147,7 +150,7 @@ public class McpPluginTests
     public async Task ListTools_EmptyToolList_ReturnsNoToolsMessage()
     {
         var clientMock = new Mock<IMcpClient>();
-        clientMock.Setup(c => c.ListToolsAsync(null, It.IsAny<CancellationToken>()))
+        clientMock.Setup(c => c.ListToolsAsync(It.IsAny<CancellationToken>()))
                   .ReturnsAsync([]);
 
         var mgr = new Mock<McpConnectionManager>(
@@ -196,15 +199,17 @@ public class McpPluginTests
     [Fact]
     public async Task CallTool_Success_ReturnsTextContent()
     {
-        var callResult = new CallToolResponse
+        var callResult = new CallToolResult
         {
-            Content = [new Content { Type = "text", Text = "Hello from MCP tool!" }],
+            Content = [new TextContentBlock { Text = "Hello from MCP tool!" }],
         };
 
         var clientMock = new Mock<IMcpClient>();
         clientMock
-            .Setup(c => c.CallToolAsync("echo", It.IsAny<Dictionary<string, System.Text.Json.JsonElement>?>(),
-                null, null, It.IsAny<CancellationToken>()))
+            .Setup(c => c.CallToolAsync(
+                "echo",
+                It.IsAny<IReadOnlyDictionary<string, object?>?>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(callResult);
 
         var mgr = new Mock<McpConnectionManager>(
@@ -221,13 +226,14 @@ public class McpPluginTests
     [Fact]
     public async Task CallTool_EmptyResult_ReturnsEmptyResultString()
     {
-        var callResult = new CallToolResponse { Content = [] };
+        var callResult = new CallToolResult { Content = [] };
 
         var clientMock = new Mock<IMcpClient>();
         clientMock
-            .Setup(c => c.CallToolAsync(It.IsAny<string>(),
-                It.IsAny<Dictionary<string, System.Text.Json.JsonElement>?>(),
-                null, null, It.IsAny<CancellationToken>()))
+            .Setup(c => c.CallToolAsync(
+                It.IsAny<string>(),
+                It.IsAny<IReadOnlyDictionary<string, object?>?>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(callResult);
 
         var mgr = new Mock<McpConnectionManager>(
@@ -310,14 +316,18 @@ public class McpPluginTests
     [Fact]
     public async Task ListResources_ReturnsFormattedList()
     {
-        var resources = new List<Resource>
-        {
-            new() { Name = "README.md",   Uri = "file:///project/README.md",   MimeType = "text/markdown",   Description = "Project readme" },
-            new() { Name = "config.json", Uri = "file:///project/config.json", MimeType = "application/json" },
-        };
+        // McpClientResource requires an McpClient (SDK type) for construction.
+        // We use a minimal stub purely to satisfy the constructor — it is never called.
+        var stub = new McpClientStub();
+
+        IList<McpClientResource> resources =
+        [
+            new McpClientResource(stub, new Resource { Name = "README.md",   Uri = "file:///project/README.md",   MimeType = "text/markdown",   Description = "Project readme" }),
+            new McpClientResource(stub, new Resource { Name = "config.json", Uri = "file:///project/config.json", MimeType = "application/json" }),
+        ];
 
         var clientMock = new Mock<IMcpClient>();
-        clientMock.Setup(c => c.ListResourcesAsync(null, It.IsAny<CancellationToken>()))
+        clientMock.Setup(c => c.ListResourcesAsync(It.IsAny<CancellationToken>()))
                   .ReturnsAsync(resources);
 
         var mgr = new Mock<McpConnectionManager>(
@@ -339,13 +349,13 @@ public class McpPluginTests
     [Fact]
     public async Task ReadResource_ReturnsTextContent()
     {
-        var readResult = new ReadResourceResponse
+        var readResult = new ReadResourceResult
         {
-            Contents = [new ResourceContents { Uri = "file:///test.md", Text = "# Hello World" }]
+            Contents = [new TextResourceContents { Uri = "file:///test.md", Text = "# Hello World" }]
         };
 
         var clientMock = new Mock<IMcpClient>();
-        clientMock.Setup(c => c.ReadResourceAsync("file:///test.md", null, It.IsAny<CancellationToken>()))
+        clientMock.Setup(c => c.ReadResourceAsync("file:///test.md", It.IsAny<CancellationToken>()))
                   .ReturnsAsync(readResult);
 
         var mgr = new Mock<McpConnectionManager>(
@@ -361,29 +371,78 @@ public class McpPluginTests
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Builds a <see cref="McpClientTool"/> wrapping a <see cref="Tool"/> with
+    /// the given name, description and parameter schema.
+    /// </summary>
     private static McpClientTool CreateTool(
         string name,
         string description,
         (string paramName, string type, bool required)[] parameters)
     {
-        var props = new Dictionary<string, JsonSchemaProperty>();
+        var props = new Dictionary<string, object>();
         var required = new List<string>();
 
         foreach (var (pName, pType, pRequired) in parameters)
         {
-            props[pName] = new JsonSchemaProperty { Type = pType };
+            props[pName] = new { type = pType, description = pType };
             if (pRequired) required.Add(pName);
         }
 
-        return new McpClientTool
+        var schemaJson = JsonSerializer.SerializeToElement(new
+        {
+            type = "object",
+            properties = props,
+            required,
+        });
+
+        var protocolTool = new Tool
         {
             Name = name,
             Description = description,
-            InputSchema = new JsonSchema
-            {
-                Properties = props,
-                Required = required,
-            },
+            InputSchema = schemaJson,
         };
+
+        // McpClientStub exists solely to satisfy the McpClientTool constructor.
+        // Its methods are never invoked in list-tools tests.
+        return new McpClientTool(new McpClientStub(), protocolTool);
     }
+}
+
+// ============================================================================
+//  McpClientStub — minimal McpClient subclass for McpClientTool construction.
+//  All abstract members throw NotImplementedException; the stub is used only
+//  as a constructor argument and is never invoked during tests.
+// ============================================================================
+
+#pragma warning disable MCPEXP002
+[SuppressMessage("Usage", "MCPEXP002", Justification = "Test double")]
+internal sealed class McpClientStub : ModelContextProtocol.Client.McpClient
+{
+    public override string? SessionId => null;
+    public override string? NegotiatedProtocolVersion => null;
+    public override Task<ClientCompletionDetails> Completion =>
+        Task.FromResult<ClientCompletionDetails>(new StdioClientCompletionDetails());
+    public override ServerCapabilities ServerCapabilities => new() { Tools = new ToolsCapability() };
+    public override Implementation ServerInfo => new() { Name = "stub", Version = "0" };
+    public override string? ServerInstructions => null;
+
+    public override ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    public override Task SendMessageAsync(
+        ModelContextProtocol.Protocol.JsonRpcMessage message,
+        CancellationToken cancellationToken = default) => Task.CompletedTask;
+    public override IAsyncDisposable RegisterNotificationHandler(
+        string method,
+        Func<ModelContextProtocol.Protocol.JsonRpcNotification, CancellationToken, ValueTask> handler)
+        => new NullAsyncDisposable();
+    public override Task<ModelContextProtocol.Protocol.JsonRpcResponse> SendRequestAsync(
+        ModelContextProtocol.Protocol.JsonRpcRequest request,
+        CancellationToken cancellationToken = default)
+        => throw new NotImplementedException("Stub — not expected to be called in unit tests.");
+}
+#pragma warning restore MCPEXP002
+
+internal sealed class NullAsyncDisposable : IAsyncDisposable
+{
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 }

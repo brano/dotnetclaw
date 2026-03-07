@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>DotnetClaw.Tests</name>
+    </assembly>
+    <members>
+        <member name="T:DotnetClaw.Tests.FakeCursorProcessRunner">
+            <summary>
+            A configurable fake for <see cref="T:DotnetClaw.Plugins.ICursorProcessRunner"/> that doesn't
+            spawn real processes — perfect for unit tests.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Tests.FakeCursorProcessRunner.NextOutput">
+            <summary>Configure the output the fake should return.</summary>
+        </member>
+        <member name="T:DotnetClaw.Tests.NullRenderer">
+            <summary>Null renderer — swallows all console output during tests.</summary>
+        </member>
+        <member name="M:DotnetClaw.Tests.McpPluginTests.CreateTool(System.String,System.String,System.ValueTuple{System.String,System.String,System.Boolean}[])">
+            <summary>
+            Builds a <see cref="T:ModelContextProtocol.Client.McpClientTool"/> wrapping a <see cref="T:ModelContextProtocol.Protocol.Tool"/> with
+            the given name, description and parameter schema.
+            </summary>
+        </member>
+    </members>
+</doc>

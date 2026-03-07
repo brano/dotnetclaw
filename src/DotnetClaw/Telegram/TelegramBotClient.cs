@@ -271,7 +271,7 @@ public sealed class TelegramBotClient : ITelegramBotClient
     /// Tries to break on double-newlines (paragraphs) first, then single newlines, then
     /// hard-cuts at <paramref name="maxLength"/> as a last resort.
     /// </summary>
-    internal static List<string> SplitMessage(string text, int maxLength)
+    public static List<string> SplitMessage(string text, int maxLength)
     {
         if (text.Length <= maxLength)
             return [text];

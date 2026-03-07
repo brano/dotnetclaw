@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel;
 using ModelContextProtocol.Client;
+using ModelContextProtocol.Protocol;
 
 namespace DotnetClaw.Plugins;
 
@@ -104,15 +105,25 @@ public sealed class McpPlugin(
                 if (!string.IsNullOrWhiteSpace(tool.Description))
                     sb.AppendLine($"    {tool.Description}");
 
-                // Surface required input parameters
-                if (tool.InputSchema?.Properties is { } props && props.Count > 0)
+                // Surface required input parameters from the JSON Schema
+                var schema = tool.ProtocolTool.InputSchema;
+                if (schema.ValueKind == JsonValueKind.Object
+                    && schema.TryGetProperty("properties", out var propsEl)
+                    && propsEl.ValueKind == JsonValueKind.Object)
                 {
-                    var required = tool.InputSchema.Required ?? [];
-                    foreach (var (paramName, schema) in props)
+                    var requiredSet = schema.TryGetProperty("required", out var reqEl)
+                        ? reqEl.EnumerateArray().Select(e => e.GetString()).ToHashSet()
+                        : [];
+
+                    foreach (var prop in propsEl.EnumerateObject())
                     {
-                        var req = required.Contains(paramName) ? " (required)" : " (optional)";
-                        var desc = schema.Description ?? schema.Type ?? "";
-                        sb.AppendLine($"    • {paramName}{req}: {desc}");
+                        var req = requiredSet.Contains(prop.Name) ? " (required)" : " (optional)";
+                        var desc = "";
+                        if (prop.Value.TryGetProperty("description", out var descEl))
+                            desc = descEl.GetString() ?? "";
+                        else if (prop.Value.TryGetProperty("type", out var typeEl))
+                            desc = typeEl.GetString() ?? "";
+                        sb.AppendLine($"    • {prop.Name}{req}: {desc}");
                     }
                 }
 
@@ -157,15 +168,20 @@ public sealed class McpPlugin(
         if (client is null)
             return $"[ERROR] Server '{serverName}' is not connected.";
 
-        Dictionary<string, JsonElement>? arguments = null;
+        // Deserialize as JsonElement values, then box to object? for the new API
+        Dictionary<string, JsonElement>? rawArgs = null;
         try
         {
-            arguments = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(argumentsJson);
+            rawArgs = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(argumentsJson);
         }
         catch (JsonException ex)
         {
             return $"[ERROR] Invalid JSON arguments: {ex.Message}\nProvided: {argumentsJson}";
         }
+
+        // Convert to IReadOnlyDictionary<string, object?> required by v1.x API
+        IReadOnlyDictionary<string, object?>? arguments =
+            rawArgs?.ToDictionary(kvp => kvp.Key, kvp => (object?)kvp.Value);
 
         if (_options.LogToolCallDetails)
             logger.LogDebug("MCP call: {Server}.{Tool}({Args})", serverName, toolName, argumentsJson);
@@ -177,20 +193,20 @@ public sealed class McpPlugin(
                 arguments,
                 cancellationToken: cancellationToken);
 
-            // Flatten the content list into a readable string
+            // Flatten the content list into a readable string using pattern matching on v1.x types
             var sb = new StringBuilder();
             foreach (var content in result.Content)
             {
-                switch (content.Type)
+                switch (content)
                 {
-                    case "text":
-                        sb.AppendLine(content.Text);
+                    case TextContentBlock tc:
+                        sb.AppendLine(tc.Text);
                         break;
-                    case "image":
-                        sb.AppendLine($"[Image: {content.MimeType}, {content.Data?.Length ?? 0} base64 chars]");
+                    case ImageContentBlock ic:
+                        sb.AppendLine($"[Image: {ic.MimeType}, {ic.Data.Length} bytes]");
                         break;
                     default:
-                        sb.AppendLine($"[{content.Type}: {content.Text}]");
+                        sb.AppendLine($"[{content.Type}]");
                         break;
                 }
             }
@@ -316,10 +332,15 @@ public sealed class McpPlugin(
             var sb = new StringBuilder();
             foreach (var content in result.Contents)
             {
-                if (!string.IsNullOrWhiteSpace(content.Text))
-                    sb.AppendLine(content.Text);
-                else if (!string.IsNullOrWhiteSpace(content.Blob))
-                    sb.AppendLine($"[Binary resource, base64 length={content.Blob.Length}]");
+                switch (content)
+                {
+                    case TextResourceContents tc when !string.IsNullOrWhiteSpace(tc.Text):
+                        sb.AppendLine(tc.Text);
+                        break;
+                    case BlobResourceContents bc when bc.Blob.Length > 0:
+                        sb.AppendLine($"[Binary resource, {bc.Blob.Length} bytes]");
+                        break;
+                }
             }
 
             var text = sb.ToString().TrimEnd();

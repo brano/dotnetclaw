@@ -1,0 +1,1373 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>DotnetClaw</name>
+    </assembly>
+    <members>
+        <member name="T:DotnetClaw.Agents.ClawAgentLoop">
+             <summary>
+             The core agentic loop for DotnetClaw.
+            
+             Architecture mirrors OpenClaw's tool-use loop:
+               1. Session starts → workspace identity documents are loaded and prepended
+                  to the system prompt (SOUL.md → AGENTS.md → USER.md → custom docs)
+               2. User sends a message
+               3. Agent decides which tools (plugins) to call
+               4. Tool results are fed back into context
+               5. Loop repeats until the agent produces a final text response
+                  OR the max-iteration guard fires
+            
+             Uses Microsoft Semantic Kernel's <see cref="T:Microsoft.SemanticKernel.Agents.ChatCompletionAgent"/> as the
+             agent runtime, with automatic function calling enabled.
+             </summary>
+        </member>
+        <member name="M:DotnetClaw.Agents.ClawAgentLoop.#ctor(Microsoft.SemanticKernel.Kernel,DotnetClaw.Workspace.WorkspaceLoader,DotnetClaw.Mcp.McpKernelLoader,Microsoft.Extensions.Options.IOptions{DotnetClaw.Config.DotnetClawOptions},DotnetClaw.UI.IConsoleRenderer,Microsoft.Extensions.Logging.ILogger{DotnetClaw.Agents.ClawAgentLoop})">
+             <summary>
+             The core agentic loop for DotnetClaw.
+            
+             Architecture mirrors OpenClaw's tool-use loop:
+               1. Session starts → workspace identity documents are loaded and prepended
+                  to the system prompt (SOUL.md → AGENTS.md → USER.md → custom docs)
+               2. User sends a message
+               3. Agent decides which tools (plugins) to call
+               4. Tool results are fed back into context
+               5. Loop repeats until the agent produces a final text response
+                  OR the max-iteration guard fires
+            
+             Uses Microsoft Semantic Kernel's <see cref="T:Microsoft.SemanticKernel.Agents.ChatCompletionAgent"/> as the
+             agent runtime, with automatic function calling enabled.
+             </summary>
+        </member>
+        <member name="M:DotnetClaw.Agents.ClawAgentLoop.InitialiseAsync(System.Threading.CancellationToken)">
+            <summary>
+            Asynchronously initialise the agent.
+            Loads workspace identity documents and constructs the full system prompt.
+            Must be awaited once before the first call to <see cref="M:DotnetClaw.Agents.ClawAgentLoop.RunTurnAsync(System.String,System.Threading.CancellationToken,DotnetClaw.UI.IConsoleRenderer)"/>.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Agents.ClawAgentLoop.RunTurnAsync(System.String,System.Threading.CancellationToken,DotnetClaw.UI.IConsoleRenderer)">
+            <summary>
+            Process a single user message through the full agentic loop.
+            </summary>
+            <param name="userMessage">The user's input.</param>
+            <param name="cancellationToken">Cancellation token.</param>
+            <param name="outputSink">
+            Optional alternative renderer — if supplied, token output goes here instead of the
+            terminal. Used by the Telegram integration to capture responses as strings.
+            </param>
+        </member>
+        <member name="M:DotnetClaw.Agents.ClawAgentLoop.ResetAsync(System.Threading.CancellationToken)">
+            <summary>
+            Reset conversation history.
+            If <see cref="P:DotnetClaw.Config.DotnetClawOptions.ReloadWorkspaceOnReset"/> is true, workspace
+            documents are re-read from disk before the new session starts.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Agents.ClawAgentLoop.GetHistory">
+            <summary>Return a snapshot of the current chat history.</summary>
+        </member>
+        <member name="P:DotnetClaw.Agents.ClawAgentLoop.EffectiveSystemPrompt">
+            <summary>Expose the effective (workspace-enriched) system prompt.</summary>
+        </member>
+        <member name="M:DotnetClaw.Agents.ClawAgentLoop.BuildSystemPromptAsync(System.Threading.CancellationToken)">
+            <summary>
+            Builds the full system prompt by composing:
+              [base system prompt from appsettings]
+              +
+              [workspace context block with all identity documents]
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.Agents.AgentResponse">
+            <summary>Placeholder for future streaming response type.</summary>
+        </member>
+        <member name="T:DotnetClaw.Agents.KernelFactory">
+             <summary>
+             Builds and configures the <see cref="T:Microsoft.SemanticKernel.Kernel"/> instance used by the agent.
+            
+             Provider selection is controlled by the DOTNETCLAW_PROVIDER environment variable:
+               openai    → OpenAI (default, uses OPENAI_API_KEY)
+               azure     → Azure OpenAI (uses AZURE_OPENAI_* env vars)
+               anthropic → Anthropic Claude (uses ANTHROPIC_API_KEY)
+             </summary>
+        </member>
+        <member name="T:DotnetClaw.Browser.BrowserSessionManager">
+             <summary>
+             Singleton service that owns the <see cref="T:Microsoft.Playwright.IPlaywright"/> and <see cref="T:Microsoft.Playwright.IBrowser"/>
+             instances for the lifetime of the DotnetClaw process.
+            
+             Responsibilities:
+               • Lazy-initialise Playwright and launch the configured browser on first use
+               • Vend <see cref="T:DotnetClaw.Browser.IBrowserSession"/> instances (persistent or fresh per request)
+               • Dispose everything cleanly on shutdown
+            
+             Persistent session mode (<see cref="P:DotnetClaw.Config.BrowserOptions.PersistBrowserSession"/> = true):
+               The same page is reused across calls — cookies, local storage, and login
+               state survive between agent turns. The page is recreated if it's been closed.
+            
+             Isolated session mode (<see cref="P:DotnetClaw.Config.BrowserOptions.PersistBrowserSession"/> = false):
+               A fresh page is created for every call to <see cref="M:DotnetClaw.Browser.BrowserSessionManager.GetSessionAsync(System.Threading.CancellationToken)"/>.
+               The caller MUST dispose the session when finished.
+             </summary>
+        </member>
+        <member name="M:DotnetClaw.Browser.BrowserSessionManager.#ctor(Microsoft.Extensions.Options.IOptions{DotnetClaw.Config.BrowserOptions},Microsoft.Extensions.Logging.ILogger{DotnetClaw.Browser.BrowserSessionManager})">
+             <summary>
+             Singleton service that owns the <see cref="T:Microsoft.Playwright.IPlaywright"/> and <see cref="T:Microsoft.Playwright.IBrowser"/>
+             instances for the lifetime of the DotnetClaw process.
+            
+             Responsibilities:
+               • Lazy-initialise Playwright and launch the configured browser on first use
+               • Vend <see cref="T:DotnetClaw.Browser.IBrowserSession"/> instances (persistent or fresh per request)
+               • Dispose everything cleanly on shutdown
+            
+             Persistent session mode (<see cref="P:DotnetClaw.Config.BrowserOptions.PersistBrowserSession"/> = true):
+               The same page is reused across calls — cookies, local storage, and login
+               state survive between agent turns. The page is recreated if it's been closed.
+            
+             Isolated session mode (<see cref="P:DotnetClaw.Config.BrowserOptions.PersistBrowserSession"/> = false):
+               A fresh page is created for every call to <see cref="M:DotnetClaw.Browser.BrowserSessionManager.GetSessionAsync(System.Threading.CancellationToken)"/>.
+               The caller MUST dispose the session when finished.
+             </summary>
+        </member>
+        <member name="M:DotnetClaw.Browser.BrowserSessionManager.GetSessionAsync(System.Threading.CancellationToken)">
+             <summary>
+             Returns an <see cref="T:DotnetClaw.Browser.IBrowserSession"/> ready for use.
+            
+             In persistent mode this always returns the same underlying page.
+             In isolated mode a new page is created — the caller must dispose it.
+             </summary>
+        </member>
+        <member name="P:DotnetClaw.Browser.BrowserSessionManager.IsRunning">
+            <summary>
+            Check whether the browser has been launched without forcing initialisation.
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.Browser.PersistentSessionWrapper">
+            <summary>
+            Wraps a shared persistent <see cref="T:Microsoft.Playwright.IPage"/> but makes <see cref="M:DotnetClaw.Browser.PersistentSessionWrapper.DisposeAsync"/>
+            a no-op — the page lifecycle is managed by <see cref="T:DotnetClaw.Browser.BrowserSessionManager"/>.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Browser.PersistentSessionWrapper.#ctor(Microsoft.Playwright.IPage,DotnetClaw.Config.BrowserOptions,Microsoft.Extensions.Logging.ILogger)">
+            <summary>
+            Wraps a shared persistent <see cref="T:Microsoft.Playwright.IPage"/> but makes <see cref="M:DotnetClaw.Browser.PersistentSessionWrapper.DisposeAsync"/>
+            a no-op — the page lifecycle is managed by <see cref="T:DotnetClaw.Browser.BrowserSessionManager"/>.
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.Browser.IBrowserSession">
+            <summary>
+            Represents a single browser tab / page session.
+            All operations are async and respect the cancellation token.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Browser.IBrowserSession.CurrentUrl">
+            <summary>URL the page is currently showing.</summary>
+        </member>
+        <member name="P:DotnetClaw.Browser.IBrowserSession.CurrentTitle">
+            <summary>Title of the current page.</summary>
+        </member>
+        <member name="M:DotnetClaw.Browser.IBrowserSession.NavigateAsync(System.String,System.Nullable{System.Int32},System.Threading.CancellationToken)">
+            <summary>
+            Navigate to <paramref name="url"/> and wait for the page to finish loading.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Browser.IBrowserSession.ScreenshotAsync(System.String,System.Boolean,System.Threading.CancellationToken)">
+            <summary>
+            Capture a screenshot of the whole page or a specific element.
+            Returns the raw PNG or JPEG bytes.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Browser.IBrowserSession.GetTextAsync(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Extract the visible text content of the page or an element.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Browser.IBrowserSession.FillAsync(System.String,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Type <paramref name="value"/> into the element matching <paramref name="cssSelector"/>.
+            Clears any existing value first.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Browser.IBrowserSession.ClickAsync(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Click the element matching <paramref name="cssSelector"/>.
+            Waits for the element to be visible and stable before clicking.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Browser.IBrowserSession.SelectOptionAsync(System.String,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Select an option in a <c>&lt;select&gt;</c> element by its visible label or value attribute.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Browser.IBrowserSession.WaitForSelectorAsync(System.String,System.Nullable{System.Int32},System.Threading.CancellationToken)">
+            <summary>
+            Wait for an element matching <paramref name="cssSelector"/> to appear in the DOM.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Browser.IBrowserSession.EvaluateAsync(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Execute arbitrary JavaScript in the page context and return the result as a string.
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.Browser.BrowserNavigateResult">
+            <summary>Result of a browser navigation.</summary>
+        </member>
+        <member name="T:DotnetClaw.Browser.PlaywrightBrowserSession">
+            <summary>
+            Production <see cref="T:DotnetClaw.Browser.IBrowserSession"/> backed by a Playwright <see cref="T:Microsoft.Playwright.IPage"/>.
+            One instance wraps one browser tab.  Disposed by <see cref="T:DotnetClaw.Browser.BrowserSessionManager"/>.
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.Config.BrowserOptions">
+             <summary>
+             Configuration for the Playwright Browser skill.
+             Bound from <c>appsettings.json</c> under the <c>DotnetClaw:Browser</c> key.
+            
+             First-time setup — install browser binaries once:
+               dotnet tool install --global Microsoft.Playwright.CLI
+               playwright install chromium
+            
+             Or via the project:
+               dotnet run --project src/DotnetClaw -- playwright install chromium
+             </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.BrowserOptions.BrowserType">
+            <summary>
+            Browser engine to use.
+            Supported values: <c>chromium</c> (default), <c>firefox</c>, <c>webkit</c>.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.BrowserOptions.Headless">
+            <summary>
+            Run browser in headless mode (no visible window).
+            Set <c>false</c> for debugging to see what the browser is doing.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.BrowserOptions.DefaultTimeoutMs">
+            <summary>
+            Default timeout in milliseconds for navigation and element waits.
+            Playwright default is 30 000 ms.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.BrowserOptions.ScreenshotDirectory">
+            <summary>
+            Directory where screenshots are saved.
+            Relative paths are resolved from <see cref="P:System.AppContext.BaseDirectory"/>.
+            Defaults to <c>./screenshots</c>.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.BrowserOptions.ScreenshotFormat">
+            <summary>
+            Screenshot image format: <c>png</c> (default) or <c>jpeg</c>.
+            PNG is lossless and preferred for code/text; JPEG is smaller for photos.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.BrowserOptions.JpegQuality">
+            <summary>
+            JPEG quality (1–100). Only used when <see cref="P:DotnetClaw.Config.BrowserOptions.ScreenshotFormat"/> is <c>jpeg</c>.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.BrowserOptions.PersistBrowserSession">
+            <summary>
+            When <c>true</c>, the same <see cref="T:Microsoft.Playwright.IPage"/> instance is
+            reused across calls in the same DotnetClaw session (cookies/login state persists).
+            When <c>false</c>, a fresh page is created for every navigation (isolated, clean state).
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.BrowserOptions.UserAgent">
+            <summary>
+            Optional user-agent string override.
+            Leave empty to use Playwright's default.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.BrowserOptions.ViewportWidth">
+            <summary>
+            Viewport width in pixels. Default 1280.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.BrowserOptions.ViewportHeight">
+            <summary>
+            Viewport height in pixels. Default 800.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.BrowserOptions.SlowMoMs">
+            <summary>
+            Slow down all Playwright operations by this many milliseconds.
+            Useful for watching what the browser is doing. Set 0 in production.
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.Config.CursorOptions">
+            <summary>
+            Configuration for the Cursor CLI (agent.exe) plugin.
+            Bound from <c>appsettings.json</c> under the <c>DotnetClaw:Cursor</c> key.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.CursorOptions.ExecutablePath">
+             <summary>
+             Path to the Cursor agent executable.
+            
+             Common locations:
+               Windows : %LOCALAPPDATA%\Programs\cursor\resources\app\bin\agent.exe
+               macOS   : /Applications/Cursor.app/Contents/Resources/app/bin/agent
+               Linux   : ~/.local/share/cursor/resources/app/bin/agent
+            
+             If set to just <c>"agent"</c> or <c>"cursor"</c>, the executable must be on PATH.
+             </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.CursorOptions.DefaultTimeoutSeconds">
+            <summary>
+            Default timeout in seconds for a Cursor agent invocation.
+            Agent mode (which may edit files) may need longer than Ask/Plan.
+            Max is capped at 1800 (30 min) regardless of this setting.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.CursorOptions.RequireConfirmationForAgentMode">
+            <summary>
+            When <c>true</c>, the plugin will print a confirmation prompt to the
+            console and wait for the user to press Y before running in Agent mode.
+            Has no effect in Plan or Ask mode (both are read-only).
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.CursorOptions.Model">
+            <summary>
+            Optional Cursor model override, e.g. <c>"claude-3-5-sonnet"</c> or <c>"gpt-4o"</c>.
+            Leave empty to use the model configured inside Cursor itself.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.CursorOptions.ExtraFlags">
+            <summary>
+            Extra CLI flags appended verbatim to every invocation.
+            Example: <c>"--no-telemetry --quiet"</c>
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.CursorOptions.AutoApproveInAgentMode">
+            <summary>
+            When <c>true</c>, the plugin passes <c>--yes</c> (or equivalent auto-approve flag)
+            to suppress interactive prompts inside the Cursor agent.
+            Only applies to Agent mode. Ignored in Plan / Ask.
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.Config.DotnetClawOptions">
+             <summary>
+             Root configuration for DotnetClaw.
+            
+             Bound from the <c>DotnetClaw</c> section in <c>appsettings.json</c>.
+             Override any setting via environment variables using the double-underscore
+             separator convention, e.g. <c>DotnetClaw__ModelId=gpt-4o-mini</c>.
+             </summary>
+        </member>
+        <member name="F:DotnetClaw.Config.DotnetClawOptions.SectionName">
+            <summary>Configuration section name used in appsettings.json.</summary>
+        </member>
+        <member name="P:DotnetClaw.Config.DotnetClawOptions.ModelId">
+             <summary>
+             Model identifier passed to the LLM provider.
+            
+             OpenAI examples    : "gpt-4o", "gpt-4o-mini", "gpt-4-turbo"
+             Azure OpenAI       : deployment name configured in your Azure portal
+             Anthropic examples : "claude-3-5-sonnet-20241022", "claude-3-haiku-20240307"
+            
+             The active provider is controlled by the DOTNETCLAW_PROVIDER environment variable.
+             </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.DotnetClawOptions.MaxIterations">
+             <summary>
+             Maximum number of agentic loop iterations before DotnetClaw forces a stop.
+            
+             Each iteration is one round of: model inference → optional tool calls → result injection.
+             A higher value allows more complex multi-step tasks; a lower value guards against
+             runaway loops consuming tokens.
+            
+             Range: 1–100. Default: 20.
+             </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.DotnetClawOptions.SystemPrompt">
+             <summary>
+             Base system prompt injected at the start of every conversation.
+            
+             This is prepended <em>before</em> any workspace identity documents (SOUL.md, AGENTS.md, etc.)
+             and before the user's first message. Keep this short and high-level; use workspace
+             documents for richer persona and project-specific context.
+            
+             Leave empty to use no base prompt (workspace documents take full responsibility).
+             </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.DotnetClawOptions.WorkingDirectory">
+             <summary>
+             Default working directory for shell commands executed by <c>ShellPlugin.run_command</c>.
+            
+             Relative paths are resolved from <see cref="P:System.AppContext.BaseDirectory"/>.
+             Use <c>"."</c> to inherit the current working directory at launch.
+             </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.DotnetClawOptions.AllowedShellCommands">
+             <summary>
+             Allow-list of shell command prefixes. Only commands whose first token starts
+             with one of these strings will be executed.
+            
+             <b>Empty list = developer mode (all commands allowed).</b>
+             In production or shared environments, always populate this list.
+            
+             The block-list (<see cref="P:DotnetClaw.Config.DotnetClawOptions.BlockedShellCommands"/>) is always checked first,
+             regardless of this setting.
+            
+             Example: <c>["dotnet", "git", "npm"]</c>
+             </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.DotnetClawOptions.BlockedShellCommands">
+             <summary>
+             Block-list of shell command patterns. Commands matching any entry in this list
+             are always rejected, even if they appear in <see cref="P:DotnetClaw.Config.DotnetClawOptions.AllowedShellCommands"/>.
+            
+             Matching is done as a prefix check on the full command string (after trimming).
+             Add patterns here for any command that must never be executed regardless of context.
+            
+             Example: <c>["rm -rf /", "format", "del /f /s /q C:\\"]</c>
+             </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.DotnetClawOptions.IsShellDevMode">
+            <summary>
+            Returns <c>true</c> if the shell is running in developer mode
+            (no allow-list restrictions applied, only the block-list).
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.DotnetClawOptions.WorkspacePath">
+             <summary>
+             Path to the workspace folder containing Markdown identity documents.
+            
+             Relative paths are resolved from <see cref="P:System.AppContext.BaseDirectory"/>.
+             The folder is expected to contain <c>SOUL.md</c>, <c>AGENTS.md</c>, etc.
+            
+             Default: <c>./workspace</c> (relative to the executable).
+             </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.DotnetClawOptions.WorkspaceDocumentPriority">
+             <summary>
+             Ordered list of document basenames (without <c>.md</c>) that are injected
+             into the system prompt first, in the order given.
+            
+             Any <c>*.md</c> files in the workspace folder that are <em>not</em> in this
+             list are appended afterwards in alphabetical order.
+            
+             Default priority order:
+             <c>SOUL → AGENTS → USER → CONTEXT → MEMORY → TOOLS → RULES</c>
+            
+             Leave empty to use the built-in default order above.
+             </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.DotnetClawOptions.ReloadWorkspaceOnReset">
+             <summary>
+             When <c>true</c>, workspace documents are reloaded from disk automatically
+             whenever the user runs the <c>reset</c> command.
+            
+             Useful during active document editing sessions where you want the agent to
+             pick up changes to SOUL.md or CONTEXT.md without restarting.
+            
+             Default: <c>true</c>.
+             </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.DotnetClawOptions.ResolvedWorkspacePath">
+            <summary>
+            Resolved absolute path to the workspace folder.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.DotnetClawOptions.Cursor">
+            <summary>
+            Settings for the Cursor CLI (<c>agent.exe</c>) coding skill.
+            Bound from <c>DotnetClaw:Cursor</c>.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.DotnetClawOptions.Telegram">
+            <summary>
+            Settings for the Telegram Bot integration.
+            Bound from <c>DotnetClaw:Telegram</c>.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.DotnetClawOptions.Browser">
+            <summary>
+            Settings for the Playwright headless browser skill.
+            Bound from <c>DotnetClaw:Browser</c>.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.DotnetClawOptions.Mcp">
+            <summary>
+            Settings for the MCP (Model Context Protocol) client skill.
+            Bound from <c>DotnetClaw:Mcp</c>.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Config.DotnetClawOptions.ToStartupSummary">
+            <summary>
+            Returns a short human-readable summary of the active configuration,
+            suitable for logging at startup.
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.Config.McpTransport">
+            <summary>
+            Transport type for connecting to an MCP server.
+            </summary>
+        </member>
+        <member name="F:DotnetClaw.Config.McpTransport.Stdio">
+            <summary>
+            Launch a local process and communicate over stdin/stdout.
+            Most common for developer tools (filesystem, git, fetch, etc.).
+            Requires <see cref="P:DotnetClaw.Config.McpServerConfig.Command"/> to be set.
+            </summary>
+        </member>
+        <member name="F:DotnetClaw.Config.McpTransport.Sse">
+            <summary>
+            Connect to a remote MCP server over HTTP Server-Sent Events.
+            Requires <see cref="P:DotnetClaw.Config.McpServerConfig.Url"/> to be set.
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.Config.McpServerConfig">
+            <summary>
+            Configuration for a single MCP server connection.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.McpServerConfig.Name">
+            <summary>
+            Unique name used as the SK plugin name and for logging.
+            Example: "filesystem", "github", "fetch", "postgres"
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.McpServerConfig.Description">
+            <summary>
+            Human-readable description surfaced in help text and status outputs.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.McpServerConfig.Transport">
+            <summary>
+            Transport to use when connecting to this server.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.McpServerConfig.Command">
+            <summary>
+            [Stdio] Executable to launch.
+            Examples: "npx", "uvx", "python", "/usr/local/bin/mcp-server-filesystem"
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.McpServerConfig.Arguments">
+            <summary>
+            [Stdio] Arguments passed to <see cref="P:DotnetClaw.Config.McpServerConfig.Command"/>.
+            Example: ["-y", "@modelcontextprotocol/server-filesystem", "/home/user/projects"]
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.McpServerConfig.Environment">
+            <summary>
+            [Stdio] Additional environment variables injected into the server process.
+            Use this for API keys, tokens, and credentials.
+            Example: { "GITHUB_TOKEN": "ghp_..." }
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.McpServerConfig.WorkingDirectory">
+            <summary>
+            [Stdio] Working directory for the server process.
+            Leave empty to inherit DotnetClaw's working directory.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.McpServerConfig.Url">
+            <summary>
+            [SSE] Base URL of the remote MCP server.
+            Example: "http://localhost:3000" or "https://mcp.example.com"
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.McpServerConfig.Enabled">
+            <summary>
+            When false this server is skipped at startup — useful for temporarily
+            disabling a server without removing its config.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.McpServerConfig.ConnectionTimeoutSeconds">
+            <summary>
+            Connection timeout in seconds. Overrides the global
+            <see cref="P:DotnetClaw.Config.McpOptions.ConnectionTimeoutSeconds"/> for this server.
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.Config.McpOptions">
+            <summary>
+            Top-level MCP options — a list of server configs plus global settings.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.McpOptions.Servers">
+            <summary>
+            MCP servers to connect to at startup.
+            Each entry becomes a named SK plugin whose tools are available to the agent.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.McpOptions.ConnectionTimeoutSeconds">
+            <summary>
+            Default connection timeout in seconds for stdio server launch and SSE handshake.
+            Individual servers can override via <see cref="P:DotnetClaw.Config.McpServerConfig.ConnectionTimeoutSeconds"/>.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.McpOptions.LogToolCallDetails">
+            <summary>
+            When true, DotnetClaw logs all MCP tool call arguments and results at Debug level.
+            Useful during development; disable in production to reduce noise.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.McpOptions.EnabledServers">
+            <summary>Returns the configured servers that are currently enabled.</summary>
+        </member>
+        <member name="T:DotnetClaw.Config.TelegramOptions">
+             <summary>
+             Configuration for the Telegram Bot integration.
+             Bound from <c>appsettings.json</c> under the <c>DotnetClaw:Telegram</c> key.
+            
+             Obtain a bot token by messaging @BotFather on Telegram and running /newbot.
+             Find your chat ID by messaging @userinfobot.
+             </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.TelegramOptions.BotToken">
+            <summary>
+            Telegram Bot API token from @BotFather. Format: "123456789:ABCDefGhIJKlmNoPQRsTUVwxyZ".
+            Can also be set via the TELEGRAM_BOT_TOKEN environment variable (recommended for prod).
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.TelegramOptions.AllowedChatIds">
+            <summary>
+            Whitelist of Telegram chat IDs allowed to control DotnetClaw.
+            An empty list BLOCKS all messages — you must add at least one chat ID.
+            Both user IDs (private chats) and group chat IDs (negative numbers) are supported.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.TelegramOptions.Enabled">
+            <summary>
+            Whether the Telegram bot integration is enabled at all.
+            Set to false to disable without removing the configuration.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.TelegramOptions.LongPollTimeoutSeconds">
+            <summary>
+            Long-polling timeout in seconds passed to Telegram's getUpdates endpoint.
+            Higher values reduce API requests; lower values increase responsiveness.
+            Telegram recommends 20–60 seconds.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.TelegramOptions.MaxUpdatesPerPoll">
+            <summary>
+            Maximum number of updates to fetch per getUpdates call.
+            Range 1–100. Default 10.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.TelegramOptions.MaxMessageLength">
+            <summary>
+            Telegram message hard limit is 4096 UTF-16 code units.
+            DotnetClaw splits responses exceeding this length into multiple messages.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.TelegramOptions.ParseMode">
+            <summary>
+            Parse mode for outgoing messages. "MarkdownV2" or "HTML" or "".
+            DotnetClaw uses MarkdownV2 by default for code block formatting.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.TelegramOptions.SendTypingIndicator">
+            <summary>
+            When true, DotnetClaw sends a typing indicator (sendChatAction) while
+            processing a request — gives the user visual feedback.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.TelegramOptions.EffectiveBotToken">
+            <summary>
+            Effective bot token — prefers the TELEGRAM_BOT_TOKEN env var over appsettings.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Config.TelegramOptions.IsConfigured">
+            <summary>Returns true only when a non-empty token is configured.</summary>
+        </member>
+        <member name="T:DotnetClaw.Plugins.ICursorProcessRunner">
+            <summary>
+            Abstracts the actual process spawn so <see cref="T:DotnetClaw.Plugins.CursorPlugin"/> can be
+            tested with a mock runner without needing a real <c>agent.exe</c> on disk.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Plugins.ICursorProcessRunner.RunAsync(DotnetClaw.Plugins.CursorInvocation,System.Threading.CancellationToken)">
+            <summary>
+            Spawns the Cursor agent process with the given arguments and returns
+            the combined result once the process exits or times out.
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.Plugins.CursorInvocation">
+            <summary>
+            All the information needed to spawn one Cursor CLI invocation.
+            Built by <see cref="T:DotnetClaw.Plugins.CursorPlugin"/> and executed by <see cref="T:DotnetClaw.Plugins.ICursorProcessRunner"/>.
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.Plugins.CursorProcessOutput">
+            <summary>Raw output from the OS process — no business logic.</summary>
+        </member>
+        <member name="P:DotnetClaw.Plugins.CursorProcessOutput.Success">
+            <summary>Convenience — true when ExitCode is 0 and no process/timeout error.</summary>
+        </member>
+        <member name="T:DotnetClaw.Plugins.CursorProcessRunner">
+            <summary>
+            Production implementation that spawns a real OS process.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Plugins.CursorProcessRunner.#ctor(Microsoft.Extensions.Options.IOptions{DotnetClaw.Config.CursorOptions},Microsoft.Extensions.Logging.ILogger{DotnetClaw.Plugins.CursorProcessRunner})">
+            <summary>
+            Production implementation that spawns a real OS process.
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.Plugins.CursorMode">
+            <summary>
+            Cursor agent invocation modes, mapping directly to the <c>--mode</c> flag.
+            </summary>
+        </member>
+        <member name="F:DotnetClaw.Plugins.CursorMode.Agent">
+            <summary>
+            Default. The agent reads the codebase, plans, and applies code edits autonomously.
+            Equivalent to <c>--mode=agent</c>.
+            </summary>
+        </member>
+        <member name="F:DotnetClaw.Plugins.CursorMode.Plan">
+            <summary>
+            Planning only. The agent produces a structured step-by-step plan without touching files.
+            Equivalent to <c>--mode=plan</c>.
+            </summary>
+        </member>
+        <!-- Badly formed XML comment ignored for member "F:DotnetClaw.Plugins.CursorMode.Ask" -->
+        <member name="T:DotnetClaw.Plugins.CursorResult">
+            <summary>
+            Structured result of a Cursor CLI invocation.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Plugins.CursorResult.ToString">
+            <summary>
+            Returns a formatted summary suitable for feeding back into the agent's context.
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.Plugins.BrowserPlugin">
+             <summary>
+             Browser skill — gives DotnetClaw a full headless browser via Playwright.
+            
+             Capabilities:
+               • Navigate to any URL and inspect the result
+               • Take screenshots (whole page, visible viewport, or a specific element)
+               • Send screenshots directly to Telegram as photo messages
+               • Read text content from the page or from specific elements
+               • Fill in form fields by CSS selector
+               • Click buttons and links
+               • Submit entire forms with a single call
+               • Run arbitrary JavaScript on the page
+            
+             Prerequisites (one-time setup):
+               dotnet tool install --global Microsoft.Playwright.CLI
+               playwright install chromium
+             </summary>
+        </member>
+        <member name="M:DotnetClaw.Plugins.BrowserPlugin.#ctor(DotnetClaw.Browser.BrowserSessionManager,DotnetClaw.Telegram.ITelegramBotClient,Microsoft.Extensions.Options.IOptions{DotnetClaw.Config.BrowserOptions},Microsoft.Extensions.Options.IOptions{DotnetClaw.Config.TelegramOptions},Microsoft.Extensions.Logging.ILogger{DotnetClaw.Plugins.BrowserPlugin})">
+             <summary>
+             Browser skill — gives DotnetClaw a full headless browser via Playwright.
+            
+             Capabilities:
+               • Navigate to any URL and inspect the result
+               • Take screenshots (whole page, visible viewport, or a specific element)
+               • Send screenshots directly to Telegram as photo messages
+               • Read text content from the page or from specific elements
+               • Fill in form fields by CSS selector
+               • Click buttons and links
+               • Submit entire forms with a single call
+               • Run arbitrary JavaScript on the page
+            
+             Prerequisites (one-time setup):
+               dotnet tool install --global Microsoft.Playwright.CLI
+               playwright install chromium
+             </summary>
+        </member>
+        <member name="T:DotnetClaw.Plugins.CursorPlugin">
+             <summary>
+             Cursor CLI skill — lets DotnetClaw invoke Cursor's headless coding agent
+             (<c>agent.exe</c> / <c>agent</c>) as a sub-process.
+            
+             Supported modes (maps to Cursor's <c>--mode</c> flag):
+            
+               agent  (default) — Cursor reads the codebase, plans, and applies edits autonomously.
+               plan             — Cursor produces a structured step-by-step plan, no file changes.
+               ask              — Cursor answers questions about the codebase, read-only.
+            
+             CLI invocation format built by this plugin:
+               agent --mode=agent  --prompt "..."  [--model ...]  [--yes]  [extraFlags]  &lt;workspace&gt;
+               agent --mode=plan   --prompt "..."  [--model ...]  [extraFlags]             &lt;workspace&gt;
+               agent --mode=ask    --prompt "..."  [--model ...]  [extraFlags]             &lt;workspace&gt;
+             </summary>
+        </member>
+        <member name="M:DotnetClaw.Plugins.CursorPlugin.#ctor(DotnetClaw.Plugins.ICursorProcessRunner,Microsoft.Extensions.Options.IOptions{DotnetClaw.Config.CursorOptions},DotnetClaw.UI.IConsoleRenderer,Microsoft.Extensions.Logging.ILogger{DotnetClaw.Plugins.CursorPlugin})">
+             <summary>
+             Cursor CLI skill — lets DotnetClaw invoke Cursor's headless coding agent
+             (<c>agent.exe</c> / <c>agent</c>) as a sub-process.
+            
+             Supported modes (maps to Cursor's <c>--mode</c> flag):
+            
+               agent  (default) — Cursor reads the codebase, plans, and applies edits autonomously.
+               plan             — Cursor produces a structured step-by-step plan, no file changes.
+               ask              — Cursor answers questions about the codebase, read-only.
+            
+             CLI invocation format built by this plugin:
+               agent --mode=agent  --prompt "..."  [--model ...]  [--yes]  [extraFlags]  &lt;workspace&gt;
+               agent --mode=plan   --prompt "..."  [--model ...]  [extraFlags]             &lt;workspace&gt;
+               agent --mode=ask    --prompt "..."  [--model ...]  [extraFlags]             &lt;workspace&gt;
+             </summary>
+        </member>
+        <member name="M:DotnetClaw.Plugins.CursorPlugin.CursorAgentAsync(System.String,System.String,System.Nullable{System.Int32},System.Threading.CancellationToken)">
+            <summary>
+            Run a prompt through Cursor in <b>Agent mode</b>.
+            The agent will read the target codebase, create a plan, and apply code edits.
+            This is the most powerful mode — it can create, modify, and delete files.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Plugins.CursorPlugin.CursorPlanAsync(System.String,System.String,System.Nullable{System.Int32},System.Threading.CancellationToken)">
+            <summary>
+            Run a prompt through Cursor in <b>Plan mode</b>.
+            The agent analyses the codebase and returns a structured plan — no files are changed.
+            Use this to preview what Cursor would do before committing to Agent mode.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Plugins.CursorPlugin.CursorAskAsync(System.String,System.String,System.Nullable{System.Int32},System.Threading.CancellationToken)">
+            <summary>
+            Ask Cursor a question about a codebase in <b>Ask mode</b>.
+            The agent reads the code and answers your question. No files are changed.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Plugins.CursorPlugin.CursorRunAsync(System.String,System.String,System.String,System.String,System.String,System.Nullable{System.Int32},System.Threading.CancellationToken)">
+            <summary>
+            Low-level Cursor runner — full control over all flags.
+            Prefer <c>cursor_agent</c>, <c>cursor_plan</c>, or <c>cursor_ask</c> for most tasks.
+            Use this when you need to pass custom flags or combine options not exposed by the typed functions.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Plugins.CursorPlugin.BuildArguments(DotnetClaw.Plugins.CursorMode,System.String,System.String,System.String,System.String)">
+             <summary>
+             Build the argument string for the Cursor CLI.
+            
+             Final command structure:
+               agent --mode=&lt;mode&gt;  --prompt "&lt;prompt&gt;"  [--model &lt;model&gt;]  [--yes]  [extraFlags]  &lt;workspace&gt;
+             </summary>
+        </member>
+        <member name="M:DotnetClaw.Plugins.CursorPlugin.ShellQuote(System.String)">
+            <summary>
+            Wraps a string in double-quotes and escapes inner double-quotes.
+            Works for both bash (Linux/macOS) and cmd/PowerShell (Windows).
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.Plugins.DotnetPlugin">
+            <summary>
+            Code-aware skill for analysing and working with .NET / C# projects.
+            Helps the agent understand project structure without running the compiler.
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.Plugins.FileSystemPlugin">
+            <summary>
+            File system skill — read, write, and manage files on disk.
+            Complements ShellPlugin for code-generation and editing workflows.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Plugins.FileSystemPlugin.#ctor(Microsoft.Extensions.Logging.ILogger{DotnetClaw.Plugins.FileSystemPlugin})">
+            <summary>
+            File system skill — read, write, and manage files on disk.
+            Complements ShellPlugin for code-generation and editing workflows.
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.Plugins.McpPlugin">
+             <summary>
+             MCP management skill — lets the agent introspect and directly interact with
+             connected MCP servers at the protocol level.
+            
+             The actual MCP <em>tools</em> from each server are imported as separate SK plugins
+             named <c>Mcp_{serverName}</c> by <c>McpKernelLoader</c> — the agent calls those
+             directly by their natural function names.
+            
+             This plugin handles the management plane:
+               • List servers and their connection status
+               • List tools available on a specific server
+               • Call a tool by name with raw JSON arguments (useful for debugging)
+               • Reconnect a failed server
+               • List and read MCP resources (files, database rows, etc.)
+             </summary>
+        </member>
+        <member name="M:DotnetClaw.Plugins.McpPlugin.#ctor(DotnetClaw.Mcp.McpConnectionManager,DotnetClaw.Mcp.McpKernelLoader,Microsoft.Extensions.Options.IOptions{DotnetClaw.Config.McpOptions},Microsoft.Extensions.Logging.ILogger{DotnetClaw.Plugins.McpPlugin})">
+             <summary>
+             MCP management skill — lets the agent introspect and directly interact with
+             connected MCP servers at the protocol level.
+            
+             The actual MCP <em>tools</em> from each server are imported as separate SK plugins
+             named <c>Mcp_{serverName}</c> by <c>McpKernelLoader</c> — the agent calls those
+             directly by their natural function names.
+            
+             This plugin handles the management plane:
+               • List servers and their connection status
+               • List tools available on a specific server
+               • Call a tool by name with raw JSON arguments (useful for debugging)
+               • Reconnect a failed server
+               • List and read MCP resources (files, database rows, etc.)
+             </summary>
+        </member>
+        <member name="T:DotnetClaw.Plugins.ShellPlugin">
+            <summary>
+            Shell / CLI skill that gives the agent the ability to run terminal commands.
+            Inspired by OpenClaw's bash tool — wraps process execution with safety guards.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Plugins.ShellPlugin.#ctor(Microsoft.Extensions.Options.IOptions{DotnetClaw.Config.DotnetClawOptions},Microsoft.Extensions.Logging.ILogger{DotnetClaw.Plugins.ShellPlugin})">
+            <summary>
+            Shell / CLI skill that gives the agent the ability to run terminal commands.
+            Inspired by OpenClaw's bash tool — wraps process execution with safety guards.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Plugins.ShellPlugin.RunCommandAsync(System.String,System.String,System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Execute a shell command and return its stdout + stderr.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Plugins.ShellPlugin.ListDirectoryAsync(System.String)">
+            <summary>
+            List files and directories in a path.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Plugins.ShellPlugin.GetWorkingDirectoryAsync">
+            <summary>
+            Get the current working directory.
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.Plugins.ShellResult">
+            <summary>Structured result returned from a shell command execution.</summary>
+        </member>
+        <member name="T:DotnetClaw.Plugins.TelegramPlugin">
+             <summary>
+             Telegram skill — lets DotnetClaw proactively push messages to a Telegram chat
+             during long-running tasks, without waiting for a user prompt.
+            
+             Example uses:
+               • "When the build succeeds, send me a Telegram message"
+               • "Notify me on Telegram if any tests fail"
+               • "Keep me posted on Telegram as you refactor each file"
+             </summary>
+        </member>
+        <member name="M:DotnetClaw.Plugins.TelegramPlugin.#ctor(DotnetClaw.Telegram.ITelegramBotClient,Microsoft.Extensions.Options.IOptions{DotnetClaw.Config.TelegramOptions},Microsoft.Extensions.Logging.ILogger{DotnetClaw.Plugins.TelegramPlugin})">
+             <summary>
+             Telegram skill — lets DotnetClaw proactively push messages to a Telegram chat
+             during long-running tasks, without waiting for a user prompt.
+            
+             Example uses:
+               • "When the build succeeds, send me a Telegram message"
+               • "Notify me on Telegram if any tests fail"
+               • "Keep me posted on Telegram as you refactor each file"
+             </summary>
+        </member>
+        <member name="T:DotnetClaw.Plugins.WorkspacePlugin">
+            <summary>
+            Runtime workspace skill.
+            Lets the agent inspect, reload, and query identity documents mid-conversation.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Plugins.WorkspacePlugin.#ctor(DotnetClaw.Workspace.WorkspaceLoader)">
+            <summary>
+            Runtime workspace skill.
+            Lets the agent inspect, reload, and query identity documents mid-conversation.
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.Mcp.IMcpClient">
+            <summary>
+            Abstraction over a connected MCP server session, exposing only the operations
+            needed by <see cref="T:DotnetClaw.Plugins.McpPlugin"/> and <see cref="T:DotnetClaw.Mcp.McpKernelLoader"/>.
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.Mcp.McpClientAdapter">
+            <summary>
+            Thin adapter that wraps the SDK <see cref="T:ModelContextProtocol.Client.McpClient"/> and implements
+            <see cref="T:DotnetClaw.Mcp.IMcpClient"/> so that callers are insulated from SDK API changes
+            and tests can supply lightweight fakes without depending on the SDK class hierarchy.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Mcp.McpClientAdapter.#ctor(ModelContextProtocol.Client.McpClient)">
+            <summary>
+            Thin adapter that wraps the SDK <see cref="T:ModelContextProtocol.Client.McpClient"/> and implements
+            <see cref="T:DotnetClaw.Mcp.IMcpClient"/> so that callers are insulated from SDK API changes
+            and tests can supply lightweight fakes without depending on the SDK class hierarchy.
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.Mcp.McpServerStatus">
+            <summary>
+            Snapshot of a connected (or failed) MCP server.
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.Mcp.McpConnectionManager">
+             <summary>
+             Manages the lifecycle of all configured MCP server connections.
+            
+             Responsibilities:
+               • Connect to every enabled server at startup (stdio process launch or SSE HTTP)
+               • Expose a thread-safe dictionary of live <see cref="T:DotnetClaw.Mcp.IMcpClient"/> sessions
+               • Support per-server reconnect without restarting the whole process
+               • Dispose all clients gracefully on shutdown
+            
+             The <see cref="T:DotnetClaw.Mcp.McpKernelLoader"/> then imports each client's tools into the
+             Semantic Kernel as a named plugin at agent initialisation time.
+             </summary>
+        </member>
+        <member name="M:DotnetClaw.Mcp.McpConnectionManager.#ctor(Microsoft.Extensions.Options.IOptions{DotnetClaw.Config.McpOptions},Microsoft.Extensions.Logging.ILogger{DotnetClaw.Mcp.McpConnectionManager})">
+             <summary>
+             Manages the lifecycle of all configured MCP server connections.
+            
+             Responsibilities:
+               • Connect to every enabled server at startup (stdio process launch or SSE HTTP)
+               • Expose a thread-safe dictionary of live <see cref="T:DotnetClaw.Mcp.IMcpClient"/> sessions
+               • Support per-server reconnect without restarting the whole process
+               • Dispose all clients gracefully on shutdown
+            
+             The <see cref="T:DotnetClaw.Mcp.McpKernelLoader"/> then imports each client's tools into the
+             Semantic Kernel as a named plugin at agent initialisation time.
+             </summary>
+        </member>
+        <member name="M:DotnetClaw.Mcp.McpConnectionManager.GetClient(System.String)">
+            <summary>
+            Get a live client by server name.
+            Returns null if the server is not connected or not configured.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Mcp.McpConnectionManager.AllClients">
+            <summary>All currently live clients, keyed by server name.</summary>
+        </member>
+        <member name="M:DotnetClaw.Mcp.McpConnectionManager.GetStatuses">
+            <summary>Status snapshot for all configured servers.</summary>
+        </member>
+        <member name="M:DotnetClaw.Mcp.McpConnectionManager.ReconnectAsync(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Disconnect and reconnect a single server by name.
+            Useful after config changes or transient failures.
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.Mcp.McpKernelLoader">
+             <summary>
+             Loads all connected MCP servers into the Semantic Kernel as named plugins.
+            
+             Each MCP server becomes a plugin named <c>Mcp_{serverName}</c>.
+             Every tool the server exposes becomes a <see cref="T:Microsoft.SemanticKernel.KernelFunction"/> inside
+             that plugin — the agent can call them exactly like built-in skills.
+            
+             Example — a "filesystem" MCP server with tools read_file, write_file, list_dir:
+               Plugin "Mcp_filesystem" → KernelFunctions: read_file, write_file, list_dir
+            
+             The bridge is powered by <c>Microsoft.SemanticKernel.Plugins.MCP</c>:
+               <c>IMcpClientExtensions.AsKernelPluginAsync(client, pluginName)</c>
+               converts MCP tool schemas → SK function metadata automatically.
+             </summary>
+        </member>
+        <member name="M:DotnetClaw.Mcp.McpKernelLoader.#ctor(DotnetClaw.Mcp.McpConnectionManager,Microsoft.Extensions.Logging.ILogger{DotnetClaw.Mcp.McpKernelLoader})">
+             <summary>
+             Loads all connected MCP servers into the Semantic Kernel as named plugins.
+            
+             Each MCP server becomes a plugin named <c>Mcp_{serverName}</c>.
+             Every tool the server exposes becomes a <see cref="T:Microsoft.SemanticKernel.KernelFunction"/> inside
+             that plugin — the agent can call them exactly like built-in skills.
+            
+             Example — a "filesystem" MCP server with tools read_file, write_file, list_dir:
+               Plugin "Mcp_filesystem" → KernelFunctions: read_file, write_file, list_dir
+            
+             The bridge is powered by <c>Microsoft.SemanticKernel.Plugins.MCP</c>:
+               <c>IMcpClientExtensions.AsKernelPluginAsync(client, pluginName)</c>
+               converts MCP tool schemas → SK function metadata automatically.
+             </summary>
+        </member>
+        <member name="M:DotnetClaw.Mcp.McpKernelLoader.LoadAsync(Microsoft.SemanticKernel.Kernel,System.Threading.CancellationToken)">
+            <summary>
+            Import all live MCP client tools into <paramref name="kernel"/> as plugins.
+            Safe to call multiple times — existing Mcp_ plugins are removed and re-imported
+            so a <c>ws reload</c> or <c>mcp_reconnect</c> takes effect immediately.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Mcp.McpKernelLoader.ReloadServerAsync(System.String,Microsoft.SemanticKernel.Kernel,System.Threading.CancellationToken)">
+            <summary>
+            Reload a single server's plugin — called after <c>mcp_reconnect</c>.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Mcp.McpKernelLoader.SanitiseName(System.String)">
+            <summary>
+            Sanitise a server name for use as an SK plugin name.
+            SK plugin names must be alphanumeric + underscore only.
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.Telegram.ITelegramBotClient">
+            <summary>
+            Minimal Telegram Bot API client interface.
+            Only the methods DotnetClaw needs to send and receive messages.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Telegram.ITelegramBotClient.GetMeAsync(System.Threading.CancellationToken)">
+            <summary>Verify connectivity and return bot identity.</summary>
+        </member>
+        <member name="M:DotnetClaw.Telegram.ITelegramBotClient.GetUpdatesAsync(System.Int64,System.Int32,System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Long-poll for new updates. Pass <paramref name="offset"/> = last_update_id + 1
+            to acknowledge processed updates and avoid re-delivering them.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Telegram.ITelegramBotClient.SendMessageAsync(System.Int64,System.String,System.String,System.Nullable{System.Int64},System.Threading.CancellationToken)">
+            <summary>Send a text message to a chat. Splits automatically if over 4096 chars.</summary>
+        </member>
+        <member name="M:DotnetClaw.Telegram.ITelegramBotClient.SendTypingAsync(System.Int64,System.Threading.CancellationToken)">
+            <summary>Send a "typing…" chat action so the user sees feedback.</summary>
+        </member>
+        <member name="M:DotnetClaw.Telegram.ITelegramBotClient.SendPhotoAsync(System.Int64,System.Byte[],System.String,System.String,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Upload and send a photo (PNG or JPEG bytes) to a Telegram chat.
+            Uses multipart/form-data — no file size restriction beyond Telegram's 10 MB photo limit.
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.Telegram.TelegramBotClient">
+            <summary>
+            Raw <see cref="T:System.Net.Http.HttpClient"/>-based Telegram Bot API client.
+            Base URL: <c>https://api.telegram.org/bot{token}/</c>
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Telegram.TelegramBotClient.SplitMessage(System.String,System.Int32)">
+            <summary>
+            Split a message into chunks of at most <paramref name="maxLength"/> characters.
+            Tries to break on double-newlines (paragraphs) first, then single newlines, then
+            hard-cuts at <paramref name="maxLength"/> as a last resort.
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.Telegram.TelegramCommand">
+            <summary>
+            All recognised Telegram bot commands.
+            </summary>
+        </member>
+        <member name="F:DotnetClaw.Telegram.TelegramCommand.FreeText">
+            <summary>Free-form text — passed directly to the DotnetClaw agent loop.</summary>
+        </member>
+        <member name="F:DotnetClaw.Telegram.TelegramCommand.Ask">
+            <summary>/ask &lt;question&gt; — send to agent loop in standard Q&amp;A mode.</summary>
+        </member>
+        <member name="F:DotnetClaw.Telegram.TelegramCommand.CursorPlan">
+            <summary>/plan &lt;prompt&gt; — invoke Cursor in plan mode (no file edits).</summary>
+        </member>
+        <member name="F:DotnetClaw.Telegram.TelegramCommand.CursorAgent">
+            <summary>/agent &lt;prompt&gt; — invoke Cursor in agent mode (file edits).</summary>
+        </member>
+        <member name="F:DotnetClaw.Telegram.TelegramCommand.CursorAsk">
+            <summary>/cursor_ask &lt;question&gt; — invoke Cursor in ask/Q&amp;A mode.</summary>
+        </member>
+        <member name="F:DotnetClaw.Telegram.TelegramCommand.BrowserGoto">
+            <summary>/goto &lt;url&gt; — navigate the browser to a URL.</summary>
+        </member>
+        <member name="F:DotnetClaw.Telegram.TelegramCommand.BrowserScreenshot">
+            <summary>/screenshot [selector] — take a screenshot and send it to Telegram.</summary>
+        </member>
+        <member name="F:DotnetClaw.Telegram.TelegramCommand.Reset">
+            <summary>/reset — clear the DotnetClaw conversation history.</summary>
+        </member>
+        <member name="F:DotnetClaw.Telegram.TelegramCommand.Status">
+            <summary>/status — return the bot's current state.</summary>
+        </member>
+        <member name="F:DotnetClaw.Telegram.TelegramCommand.Help">
+            <summary>/help — list available commands.</summary>
+        </member>
+        <member name="F:DotnetClaw.Telegram.TelegramCommand.MissingArgs">
+            <summary>Command was recognised but is missing required arguments.</summary>
+        </member>
+        <member name="F:DotnetClaw.Telegram.TelegramCommand.Unknown">
+            <summary>Unknown /command — not in the recognised set.</summary>
+        </member>
+        <member name="T:DotnetClaw.Telegram.ParsedCommand">
+            <summary>A parsed Telegram command with its argument payload.</summary>
+        </member>
+        <member name="M:DotnetClaw.Telegram.ParsedCommand.#ctor(DotnetClaw.Telegram.TelegramCommand,System.String,System.String)">
+            <summary>A parsed Telegram command with its argument payload.</summary>
+        </member>
+        <member name="T:DotnetClaw.Telegram.TelegramCommandRouter">
+            <summary>
+            Parses incoming Telegram message text into typed commands and
+            dispatches them to <see cref="T:DotnetClaw.Agents.ClawAgentLoop"/> or <see cref="T:DotnetClaw.Plugins.CursorPlugin"/>.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Telegram.TelegramCommandRouter.#ctor(DotnetClaw.Agents.ClawAgentLoop,DotnetClaw.Plugins.CursorPlugin,DotnetClaw.Plugins.BrowserPlugin,Microsoft.Extensions.Options.IOptions{DotnetClaw.Config.TelegramOptions},Microsoft.Extensions.Logging.ILogger{DotnetClaw.Telegram.TelegramCommandRouter})">
+            <summary>
+            Parses incoming Telegram message text into typed commands and
+            dispatches them to <see cref="T:DotnetClaw.Agents.ClawAgentLoop"/> or <see cref="T:DotnetClaw.Plugins.CursorPlugin"/>.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Telegram.TelegramCommandRouter.Parse(System.String)">
+            <summary>Parse raw message text into a typed <see cref="T:DotnetClaw.Telegram.ParsedCommand"/>.</summary>
+        </member>
+        <member name="M:DotnetClaw.Telegram.TelegramCommandRouter.DispatchAsync(DotnetClaw.Telegram.ParsedCommand,System.Int64,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Dispatch a parsed command and return the response text to send back
+            to the Telegram user. Never throws — exceptions are caught and returned
+            as error messages.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Telegram.TelegramCommandRouter.EscapeMarkdown(System.String)">
+            <summary>
+            Escape special characters for Telegram MarkdownV2.
+            Required chars: _ * [ ] ( ) ~ ` > # + - = | { } . !
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.Telegram.ResponseCollector">
+            <summary>
+            Adapter that implements <see cref="!:IConsoleRenderer"/> as a string buffer,
+            allowing <see cref="M:DotnetClaw.Agents.ClawAgentLoop.RunTurnAsync(System.String,System.Threading.CancellationToken,DotnetClaw.UI.IConsoleRenderer)"/> to be called with a
+            Telegram-bound output sink instead of writing to the terminal.
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.Telegram.TelegramApiResponse`1">
+            <summary>Wrapper around every Bot API response envelope.</summary>
+        </member>
+        <member name="T:DotnetClaw.Telegram.TelegramUpdate">
+            <summary>
+            An incoming update from Telegram's getUpdates endpoint.
+            DotnetClaw only handles <c>message</c> and <c>edited_message</c> updates.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Telegram.TelegramUpdate.EffectiveMessage">
+            <summary>The effective message — prefers message, falls back to edited_message.</summary>
+        </member>
+        <member name="T:DotnetClaw.Telegram.TelegramMessage">
+            <summary>A Telegram message with the fields DotnetClaw cares about.</summary>
+        </member>
+        <member name="P:DotnetClaw.Telegram.TelegramMessage.SentAt">
+            <summary>UTC timestamp of the message.</summary>
+        </member>
+        <member name="T:DotnetClaw.Telegram.TelegramUser">
+            <summary>Telegram user (bot or human).</summary>
+        </member>
+        <member name="T:DotnetClaw.Telegram.TelegramChat">
+            <summary>Telegram chat (private, group, supergroup, or channel).</summary>
+        </member>
+        <member name="T:DotnetClaw.Telegram.TelegramBotInfo">
+            <summary>Bot identity returned by getMe.</summary>
+        </member>
+        <member name="T:DotnetClaw.Telegram.SendMessageRequest">
+            <summary>Payload for sendMessage.</summary>
+        </member>
+        <member name="T:DotnetClaw.Telegram.SendChatActionRequest">
+            <summary>Payload for sendChatAction (typing indicator).</summary>
+        </member>
+        <member name="T:DotnetClaw.Telegram.TelegramPollingService">
+             <summary>
+             Background service that long-polls the Telegram Bot API for new messages
+             and dispatches them to <see cref="T:DotnetClaw.Telegram.TelegramCommandRouter"/>.
+            
+             Design:
+               • Uses getUpdates long-polling (no webhook required — works behind NAT/firewalls)
+               • Tracks <c>offset</c> to acknowledge each update exactly once
+               • Enforces the <c>AllowedChatIds</c> whitelist before any processing
+               • Sends a typing indicator while the agent is thinking
+               • Serialises concurrent requests per-chat with a <see cref="T:System.Threading.SemaphoreSlim"/>
+                 so two messages from the same chat never interleave agent calls
+             </summary>
+        </member>
+        <member name="M:DotnetClaw.Telegram.TelegramPollingService.#ctor(DotnetClaw.Telegram.ITelegramBotClient,DotnetClaw.Telegram.TelegramCommandRouter,Microsoft.Extensions.Options.IOptions{DotnetClaw.Config.TelegramOptions},Microsoft.Extensions.Logging.ILogger{DotnetClaw.Telegram.TelegramPollingService})">
+             <summary>
+             Background service that long-polls the Telegram Bot API for new messages
+             and dispatches them to <see cref="T:DotnetClaw.Telegram.TelegramCommandRouter"/>.
+            
+             Design:
+               • Uses getUpdates long-polling (no webhook required — works behind NAT/firewalls)
+               • Tracks <c>offset</c> to acknowledge each update exactly once
+               • Enforces the <c>AllowedChatIds</c> whitelist before any processing
+               • Sends a typing indicator while the agent is thinking
+               • Serialises concurrent requests per-chat with a <see cref="T:System.Threading.SemaphoreSlim"/>
+                 so two messages from the same chat never interleave agent calls
+             </summary>
+        </member>
+        <member name="T:DotnetClaw.UI.IConsoleRenderer">
+            <summary>
+            Abstraction over the terminal output so the agent loop stays testable.
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.UI.SpectreConsoleRenderer">
+            <summary>
+            Spectre.Console-powered rich terminal renderer.
+            Inspired by OpenClaw's colour-coded tool-call display.
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.Workspace.WorkspaceDocument">
+            <summary>
+            Represents a single identity / context document loaded from the workspace folder.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Workspace.WorkspaceDocument.Name">
+            <summary>File name without extension, e.g. "SOUL", "USER", "AGENTS".</summary>
+        </member>
+        <member name="P:DotnetClaw.Workspace.WorkspaceDocument.FilePath">
+            <summary>Full path to the file on disk.</summary>
+        </member>
+        <member name="P:DotnetClaw.Workspace.WorkspaceDocument.Content">
+            <summary>Raw markdown content of the document.</summary>
+        </member>
+        <member name="P:DotnetClaw.Workspace.WorkspaceDocument.LoadedAt">
+            <summary>UTC timestamp of when the file was last read.</summary>
+        </member>
+        <member name="P:DotnetClaw.Workspace.WorkspaceDocument.FileModifiedAt">
+            <summary>UTC last-write time of the file at load time.</summary>
+        </member>
+        <member name="M:DotnetClaw.Workspace.WorkspaceDocument.ToContextBlock">
+            <summary>
+            Render this document as a system-context block suitable for injection
+            into the agent's system prompt.
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.Workspace.WorkspaceLoadResult">
+            <summary>
+            Describes how the workspace was loaded during a session initialisation.
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.Workspace.WorkspaceLoader">
+             <summary>
+             Scans the <c>./workspace</c> folder and loads identity / context documents
+             (SOUL.md, USER.md, AGENTS.md, and any other *.md files) into memory.
+            
+             Loading rules:
+               1. Known priority documents are loaded first, in the order defined by
+                  <see cref="P:DotnetClaw.Config.DotnetClawOptions.WorkspaceDocumentPriority"/>.
+               2. Any remaining *.md files in the folder are appended alphabetically.
+               3. Non-.md files are listed in <see cref="P:DotnetClaw.Workspace.WorkspaceLoadResult.SkippedFiles"/>.
+               4. Missing priority files are silently skipped (workspace is optional).
+             </summary>
+        </member>
+        <member name="M:DotnetClaw.Workspace.WorkspaceLoader.#ctor(Microsoft.Extensions.Options.IOptions{DotnetClaw.Config.DotnetClawOptions},Microsoft.Extensions.Logging.ILogger{DotnetClaw.Workspace.WorkspaceLoader})">
+             <summary>
+             Scans the <c>./workspace</c> folder and loads identity / context documents
+             (SOUL.md, USER.md, AGENTS.md, and any other *.md files) into memory.
+            
+             Loading rules:
+               1. Known priority documents are loaded first, in the order defined by
+                  <see cref="P:DotnetClaw.Config.DotnetClawOptions.WorkspaceDocumentPriority"/>.
+               2. Any remaining *.md files in the folder are appended alphabetically.
+               3. Non-.md files are listed in <see cref="P:DotnetClaw.Workspace.WorkspaceLoadResult.SkippedFiles"/>.
+               4. Missing priority files are silently skipped (workspace is optional).
+             </summary>
+        </member>
+        <member name="M:DotnetClaw.Workspace.WorkspaceLoader.LoadAsync(System.Threading.CancellationToken)">
+            <summary>
+            Load (or return cached) workspace documents.
+            Call <see cref="M:DotnetClaw.Workspace.WorkspaceLoader.ReloadAsync(System.Threading.CancellationToken)"/> to force a fresh read from disk.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Workspace.WorkspaceLoader.ReloadAsync(System.Threading.CancellationToken)">
+            <summary>
+            Force a fresh read from disk and update the cache.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Workspace.WorkspaceLoader.GetDocumentAsync(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Retrieve a single document by name (case-insensitive), or null if not loaded.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Workspace.WorkspaceLoader.BuildContextBlockAsync(System.Threading.CancellationToken)">
+            <summary>
+            Build the full context block to be injected into the system prompt.
+            Returns an empty string when the workspace folder is absent or empty.
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.Workspace.WorkspaceDefaults">
+            <summary>Compile-time constants for workspace defaults.</summary>
+        </member>
+        <member name="F:DotnetClaw.Workspace.WorkspaceDefaults.DefaultPriorityOrder">
+            <summary>
+            The canonical order in which well-known identity documents are injected.
+            SOUL → AGENTS → USER → CONTEXT gives a natural "who I am → how I work → who you are → current context" flow.
+            </summary>
+        </member>
+    </members>
+</doc>

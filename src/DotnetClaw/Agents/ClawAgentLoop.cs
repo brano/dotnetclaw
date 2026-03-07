@@ -103,10 +103,11 @@ public sealed class ClawAgentLoop(
                                new ChatMessageContent(AuthorRole.User, userMessage),
                                cancellationToken: cancellationToken))
             {
-                if (streamChunk.Content is not null)
+                var chunkContent = streamChunk.Message.Content;
+                if (chunkContent is not null)
                 {
-                    sink.WriteChunk(streamChunk.Content);
-                    lastAssistantText += streamChunk.Content;
+                    sink.WriteChunk(chunkContent);
+                    lastAssistantText += chunkContent;
                 }
             }
 
