@@ -18,29 +18,27 @@
   </PropertyGroup>
 
   <ItemGroup Label="Microsoft Semantic Kernel">
-    <PackageVersion Include="Microsoft.SemanticKernel"              Version="1.30.0" />
-    <PackageVersion Include="Microsoft.SemanticKernel.Agents.Core"  Version="1.30.0" />
-    <PackageVersion Include="Microsoft.SemanticKernel.Agents.OpenAI" Version="1.30.0" />
-    <PackageVersion Include="Microsoft.SemanticKernel.Plugins.MCP"  Version="1.30.0" />
+    <PackageVersion Include="Microsoft.SemanticKernel"               Version="1.73.0" />
+    <PackageVersion Include="Microsoft.SemanticKernel.Agents.Core"   Version="1.73.0" />
+    <PackageVersion Include="Microsoft.SemanticKernel.Agents.OpenAI" Version="1.73.0-preview" />
   </ItemGroup>
 
   <ItemGroup Label="MCP (Model Context Protocol)">
-    <PackageVersion Include="ModelContextProtocol"        Version="0.1.0-preview.10" />
-    <PackageVersion Include="ModelContextProtocol.Client" Version="0.1.0-preview.10" />
+    <PackageVersion Include="ModelContextProtocol" Version="1.1.0" />
   </ItemGroup>
 
   <ItemGroup Label="Microsoft Extensions">
-    <PackageVersion Include="Microsoft.Extensions.Configuration"                  Version="9.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Configuration.Json"             Version="9.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="9.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection"            Version="9.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting"                        Version="9.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions"           Version="9.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Logging"                        Version="9.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions"           Version="9.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Console"                Version="9.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Options"                        Version="9.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration"                      Version="10.0.3" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Json"                 Version="10.0.3" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.3" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection"                Version="10.0.3" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions"   Version="10.0.3" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting"                            Version="10.0.3" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions"               Version="10.0.3" />
+    <PackageVersion Include="Microsoft.Extensions.Logging"                            Version="10.0.3" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions"               Version="10.0.3" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Console"                    Version="10.0.3" />
+    <PackageVersion Include="Microsoft.Extensions.Options"                            Version="10.0.3" />
   </ItemGroup>
 
   <ItemGroup Label="UI">
@@ -52,7 +50,7 @@
   </ItemGroup>
 
   <ItemGroup Label="Serialisation">
-    <PackageVersion Include="System.Text.Json" Version="9.0.0" />
+    <PackageVersion Include="System.Text.Json" Version="10.0.3" />
   </ItemGroup>
 
   <ItemGroup Label="Testing">

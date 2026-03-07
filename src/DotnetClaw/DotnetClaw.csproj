@@ -20,12 +20,10 @@
     <PackageReference Include="Microsoft.SemanticKernel" />
     <PackageReference Include="Microsoft.SemanticKernel.Agents.Core" />
     <PackageReference Include="Microsoft.SemanticKernel.Agents.OpenAI" />
-    <PackageReference Include="Microsoft.SemanticKernel.Plugins.MCP" />
   </ItemGroup>
 
   <ItemGroup Label="MCP (Model Context Protocol)">
     <PackageReference Include="ModelContextProtocol" />
-    <PackageReference Include="ModelContextProtocol.Client" />
   </ItemGroup>
 
   <ItemGroup Label="Microsoft Extensions">
@@ -72,7 +70,7 @@
   <PropertyGroup Label="Publish">
     <!--
       Supported self-contained publish RIDs.
-      Use: dotnet publish -c Release -r win-x64 --self-contained
+      Use: dotnet publish -c Release -r win-x64 - -self-contained
     -->
     <RuntimeIdentifiers>win-x64;win-arm64;linux-x64;linux-arm64;osx-x64;osx-arm64</RuntimeIdentifiers>
   </PropertyGroup>
