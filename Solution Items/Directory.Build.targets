@@ -1,0 +1,24 @@
+<Project>
+
+  <!--
+    Directory.Build.targets — shared MSBuild targets, runs AFTER each project's own targets.
+  -->
+
+  <!-- Collect code coverage for all test projects automatically when run via 'dotnet test' -->
+  <PropertyGroup Condition="'$(IsTestProject)' == 'true'">
+    <CollectCoverage>true</CollectCoverage>
+    <CoverletOutputFormat>cobertura</CoverletOutputFormat>
+    <CoverletOutput>$(MSBuildProjectDirectory)/coverage/</CoverletOutput>
+    <Exclude>[*.Tests]*</Exclude>
+  </PropertyGroup>
+
+  <!-- Copy appsettings to output directory for all projects that declare it -->
+  <Target Name="CopyAppSettings"
+          AfterTargets="Build"
+          Condition="Exists('$(MSBuildProjectDirectory)\appsettings.json')">
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\appsettings.json"
+          DestinationFolder="$(OutDir)"
+          SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>

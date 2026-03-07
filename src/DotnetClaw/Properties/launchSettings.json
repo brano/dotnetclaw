@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json.schemastore.org/launchsettings.json",
+  "profiles": {
+    "DotnetClaw (OpenAI)": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development",
+        "DOTNETCLAW_PROVIDER": "openai",
+        "OPENAI_API_KEY": "sk-REPLACE_ME"
+      }
+    },
+    "DotnetClaw (Azure OpenAI)": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development",
+        "DOTNETCLAW_PROVIDER": "azure",
+        "AZURE_OPENAI_ENDPOINT": "https://REPLACE_ME.openai.azure.com/",
+        "AZURE_OPENAI_API_KEY": "REPLACE_ME",
+        "AZURE_OPENAI_DEPLOYMENT": "gpt-4o"
+      }
+    },
+    "DotnetClaw (with Telegram)": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development",
+        "DOTNETCLAW_PROVIDER": "openai",
+        "OPENAI_API_KEY": "sk-REPLACE_ME",
+        "TELEGRAM_BOT_TOKEN": "REPLACE_ME"
+      }
+    }
+  }
+}

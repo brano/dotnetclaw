@@ -1,0 +1,70 @@
+<Project>
+
+  <!--
+    Directory.Build.props — inherited by ALL projects under this directory.
+    Override any property in individual .csproj files as needed.
+  -->
+
+  <PropertyGroup Label="Product Identity">
+    <Product>DotnetClaw</Product>
+    <Authors>DotnetClaw Contributors</Authors>
+    <Company>DotnetClaw</Company>
+    <Copyright>Copyright © $([System.DateTime]::UtcNow.Year) DotnetClaw Contributors</Copyright>
+    <Description>OpenClaw-inspired AI assistant built on .NET 10 and Microsoft Semantic Kernel.</Description>
+    <PackageTags>ai;assistant;semantic-kernel;openai;dotnet;cli;telegram;cursor</PackageTags>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/your-org/DotnetClaw</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/your-org/DotnetClaw</PackageProjectUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Versioning">
+    <VersionPrefix>0.1.0</VersionPrefix>
+    <VersionSuffix Condition="'$(VersionSuffix)' == ''">alpha</VersionSuffix>
+    <!-- Full version: 0.1.0-alpha  (override VersionSuffix='' for a release build) -->
+    <AssemblyVersion>0.1.0.0</AssemblyVersion>
+    <FileVersion>0.1.0.0</FileVersion>
+    <InformationalVersion>$(VersionPrefix)-$(VersionSuffix)+$(SourceRevisionId)</InformationalVersion>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Target Framework">
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>preview</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Build Quality">
+    <!-- Treat all warnings as errors in Release; warn-only in Debug so dev loop stays fast -->
+    <TreatWarningsAsErrors Condition="'$(Configuration)' == 'Release'">true</TreatWarningsAsErrors>
+    <WarningsAsErrors />
+    <!-- Suppress selected noisy warnings that are acceptable in this project -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>  <!-- missing XML doc comment — docs are opt-in -->
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisMode>Recommended</AnalysisMode>
+    <AnalysisLevel>latest</AnalysisLevel>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Reproducible Builds">
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <!-- Full PDBs in Debug, portable (embedded) in Release for symbol server compatibility -->
+    <DebugType Condition="'$(Configuration)' == 'Debug'">full</DebugType>
+    <DebugType Condition="'$(Configuration)' == 'Release'">embedded</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+  </PropertyGroup>
+
+  <PropertyGroup Label="XML Documentation">
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <DocumentationFile>$(OutDir)$(AssemblyName).xml</DocumentationFile>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Central Package Management">
+    <!-- Opt in to Central Package Management — versions live in Directory.Packages.props -->
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+</Project>

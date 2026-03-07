@@ -1,0 +1,54 @@
+<Solution>
+  <!--
+    DotnetClaw.slnx — Visual Studio XML Solution Format
+    Requires: Visual Studio 2022 17.10+ or .NET SDK 9.0.200+
+
+    This is the modern replacement for the legacy .sln format.
+    The old DotnetClaw.sln is kept alongside for tooling that hasn't
+    adopted .slnx yet (older CI agents, third-party tools, Rider < 2024.2).
+
+    Open with VS 2022: File → Open → Solution, pick DotnetClaw.slnx
+    Build from CLI:    dotnet build DotnetClaw.slnx
+  -->
+
+  <!-- ── Solution Configurations ────────────────────────────────────────── -->
+  <Configurations>
+    <BuildType Name="Debug" />
+    <BuildType Name="Release" />
+  </Configurations>
+
+  <Platforms>
+    <Platform Name="Any CPU" />
+  </Platforms>
+
+  <!-- ── Source Projects ─────────────────────────────────────────────────── -->
+  <Folder Name="/src/" Description="Application source code">
+    <Project Path="src/DotnetClaw/DotnetClaw.csproj" />
+  </Folder>
+
+  <!-- ── Test Projects ───────────────────────────────────────────────────── -->
+  <Folder Name="/tests/" Description="Automated test projects">
+    <Project Path="tests/DotnetClaw.Tests/DotnetClaw.Tests.csproj" />
+  </Folder>
+
+  <!-- ── Solution Items (config files visible in VS Solution Explorer) ───── -->
+  <Folder Name="/Solution Items/" Description="Repo-level configuration files">
+    <File Path=".editorconfig" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Build.targets" />
+    <File Path="Directory.Packages.props" />
+    <File Path="global.json" />
+    <File Path="README.md" />
+    <File Path="src/DotnetClaw/appsettings.json" />
+  </Folder>
+
+  <!-- ── Workspace Documents ─────────────────────────────────────────────── -->
+  <Folder Name="/workspace/" Description="Identity documents loaded at runtime">
+    <File Path="workspace/SOUL.md" />
+    <File Path="workspace/AGENTS.md" />
+    <File Path="workspace/USER.md" />
+    <File Path="workspace/CONTEXT.md" />
+    <File Path="workspace/MEMORY.md" />
+  </Folder>
+
+</Solution>

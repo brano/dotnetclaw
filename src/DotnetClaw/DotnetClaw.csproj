@@ -1,0 +1,80 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       DotnetClaw — Main Application
+       OpenClaw-inspired AI assistant built on .NET 10 + Semantic Kernel
+       ═══════════════════════════════════════════════════════════════════════ -->
+
+  <PropertyGroup Label="Application">
+    <OutputType>Exe</OutputType>
+    <RootNamespace>DotnetClaw</RootNamespace>
+    <AssemblyName>DotnetClaw</AssemblyName>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+  </PropertyGroup>
+
+  <!-- ── NuGet Dependencies ────────────────────────────────────────────────
+       Versions resolved from /Directory.Packages.props (Central Package Management).
+  -->
+
+  <ItemGroup Label="Semantic Kernel">
+    <PackageReference Include="Microsoft.SemanticKernel" />
+    <PackageReference Include="Microsoft.SemanticKernel.Agents.Core" />
+    <PackageReference Include="Microsoft.SemanticKernel.Agents.OpenAI" />
+    <PackageReference Include="Microsoft.SemanticKernel.Plugins.MCP" />
+  </ItemGroup>
+
+  <ItemGroup Label="MCP (Model Context Protocol)">
+    <PackageReference Include="ModelContextProtocol" />
+    <PackageReference Include="ModelContextProtocol.Client" />
+  </ItemGroup>
+
+  <ItemGroup Label="Microsoft Extensions">
+    <PackageReference Include="Microsoft.Extensions.Configuration" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="Microsoft.Extensions.Logging" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" />
+  </ItemGroup>
+
+  <ItemGroup Label="UI">
+    <PackageReference Include="Spectre.Console" />
+  </ItemGroup>
+
+  <ItemGroup Label="Browser Automation">
+    <PackageReference Include="Microsoft.Playwright" />
+  </ItemGroup>
+
+  <ItemGroup Label="Serialisation">
+    <PackageReference Include="System.Text.Json" />
+  </ItemGroup>
+
+  <!-- ── Content Files ──────────────────────────────────────────────────── -->
+
+  <ItemGroup Label="Config">
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="appsettings.Development.json" Condition="Exists('appsettings.Development.json')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <!-- Workspace identity documents — copied to output so dotnet run finds them -->
+  <ItemGroup Label="Workspace">
+    <None Update="..\..\workspace\**\*" Condition="Exists('..\..\workspace\')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>workspace\%(RecursiveDir)%(Filename)%(Extension)</Link>
+    </None>
+  </ItemGroup>
+
+  <PropertyGroup Label="Publish">
+    <!--
+      Supported self-contained publish RIDs.
+      Use: dotnet publish -c Release -r win-x64 --self-contained
+    -->
+    <RuntimeIdentifiers>win-x64;win-arm64;linux-x64;linux-arm64;osx-x64;osx-arm64</RuntimeIdentifiers>
+  </PropertyGroup>
+
+</Project>

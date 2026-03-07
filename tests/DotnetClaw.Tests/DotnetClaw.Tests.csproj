@@ -1,0 +1,72 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       DotnetClaw.Tests — xUnit Test Project
+       ═══════════════════════════════════════════════════════════════════════ -->
+
+  <PropertyGroup Label="Test Project Identity">
+    <RootNamespace>DotnetClaw.Tests</RootNamespace>
+    <AssemblyName>DotnetClaw.Tests</AssemblyName>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Test Behaviour">
+    <!-- xUnit v3 parallel execution -->
+    <ParallelizeAssembly>true</ParallelizeAssembly>
+    <ParallelizeTestCollections>true</ParallelizeTestCollections>
+    <!-- Generate a JUnit-compatible XML report (useful for CI) -->
+    <GenerateTestingPlatformEntryPoint>false</GenerateTestingPlatformEntryPoint>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Coverage">
+    <CollectCoverage>true</CollectCoverage>
+    <CoverletOutputFormat>cobertura</CoverletOutputFormat>
+    <CoverletOutput>$(MSBuildProjectDirectory)/coverage/coverage.cobertura.xml</CoverletOutput>
+    <Threshold>0</Threshold>
+    <!-- Exclude test helpers and generated code from coverage -->
+    <ExcludeByAttribute>GeneratedCodeAttribute,CompilerGeneratedAttribute</ExcludeByAttribute>
+    <Exclude>[DotnetClaw.Tests]*</Exclude>
+  </PropertyGroup>
+
+  <!-- ── NuGet Dependencies ───────────────────────────────────────────────
+       Versions resolved from /Directory.Packages.props (Central Package Management).
+  -->
+
+  <ItemGroup Label="xUnit Test Framework">
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup Label="Mocking">
+    <PackageReference Include="Moq" />
+    <PackageReference Include="RichardSzalay.MockHttp" />
+  </ItemGroup>
+
+  <ItemGroup Label="Microsoft Extensions (test utilities)">
+    <PackageReference Include="Microsoft.Extensions.Options" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup Label="Coverage">
+    <PackageReference Include="coverlet.collector">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="coverlet.msbuild">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <!-- ── Project References ───────────────────────────────────────────────── -->
+
+  <ItemGroup Label="Projects Under Test">
+    <ProjectReference Include="..\..\src\DotnetClaw\DotnetClaw.csproj" />
+  </ItemGroup>
+
+</Project>
