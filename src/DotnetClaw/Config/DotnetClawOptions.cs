@@ -40,7 +40,7 @@ public sealed class DotnetClawOptions
     /// The active provider is controlled by the DOTNETCLAW_PROVIDER environment variable.
     /// </summary>
     [Required(AllowEmptyStrings = false, ErrorMessage = "ModelId is required.")]
-    public string ModelId { get; set; } = "gpt-4o";
+    public string ModelId { get; set; } = "gpt-4o-mini";
 
     /// <summary>
     /// Maximum number of agentic loop iterations before DotnetClaw forces a stop.
