@@ -1307,6 +1307,35 @@
             into the agent's system prompt.
             </summary>
         </member>
+        <member name="T:DotnetClaw.Workspace.SkillDocument">
+            <summary>
+            Represents a single skill loaded from a <c>workspace/skills/{name}/SKILL.md</c> file.
+            Skills are how-to guides the LLM can reference to complete specialised tasks.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Workspace.SkillDocument.SkillName">
+            <summary>
+            The skill folder name, e.g. "weather", "github", "copilot-cli".
+            Derived from the parent directory of the SKILL.md file.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Workspace.SkillDocument.FilePath">
+            <summary>Full path to the SKILL.md file on disk.</summary>
+        </member>
+        <member name="P:DotnetClaw.Workspace.SkillDocument.Content">
+            <summary>Raw markdown content of SKILL.md.</summary>
+        </member>
+        <member name="P:DotnetClaw.Workspace.SkillDocument.LoadedAt">
+            <summary>UTC timestamp of when the file was last read.</summary>
+        </member>
+        <member name="P:DotnetClaw.Workspace.SkillDocument.FileModifiedAt">
+            <summary>UTC last-write time of the file at load time.</summary>
+        </member>
+        <member name="M:DotnetClaw.Workspace.SkillDocument.ToContextBlock">
+            <summary>
+            Render this skill as a context block for injection into the system prompt.
+            </summary>
+        </member>
         <member name="T:DotnetClaw.Workspace.WorkspaceLoadResult">
             <summary>
             Describes how the workspace was loaded during a session initialisation.
@@ -1354,14 +1383,31 @@
             Retrieve a single document by name (case-insensitive), or null if not loaded.
             </summary>
         </member>
+        <member name="M:DotnetClaw.Workspace.WorkspaceLoader.GetSkillAsync(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Retrieve a single skill by name (case-insensitive), or null if not loaded.
+            </summary>
+        </member>
         <member name="M:DotnetClaw.Workspace.WorkspaceLoader.BuildContextBlockAsync(System.Threading.CancellationToken)">
             <summary>
             Build the full context block to be injected into the system prompt.
             Returns an empty string when the workspace folder is absent or empty.
             </summary>
         </member>
+        <member name="M:DotnetClaw.Workspace.WorkspaceLoader.LoadSkillsAsync(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Scans <c>workspace/skills/*/SKILL.md</c> and returns a <see cref="T:DotnetClaw.Workspace.SkillDocument"/>
+            for each non-empty SKILL.md found. The skill name is taken from the folder name.
+            </summary>
+        </member>
         <member name="T:DotnetClaw.Workspace.WorkspaceDefaults">
             <summary>Compile-time constants for workspace defaults.</summary>
+        </member>
+        <member name="F:DotnetClaw.Workspace.WorkspaceDefaults.SkillsFolderName">
+            <summary>Sub-folder inside the workspace that contains skill directories.</summary>
+        </member>
+        <member name="F:DotnetClaw.Workspace.WorkspaceDefaults.SkillFileName">
+            <summary>The file name that defines a skill inside its folder.</summary>
         </member>
         <member name="F:DotnetClaw.Workspace.WorkspaceDefaults.DefaultPriorityOrder">
             <summary>

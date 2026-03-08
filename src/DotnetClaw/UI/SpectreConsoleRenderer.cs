@@ -34,10 +34,12 @@ public sealed class SpectreConsoleRenderer : IConsoleRenderer
         AnsiConsole.Write(
             new FigletText("DotnetClaw")
                 .Centered()
-                .Color(Color.Cyan1));
+                .Color(Color.BlueViolet));
 
-        AnsiConsole.MarkupLine("[bold cyan]  .NET 10 AI Assistant — powered by Microsoft Semantic Kernel[/]");
-        AnsiConsole.MarkupLine("[grey]  OpenClaw-inspired agentic loop with Shell, FileSystem & Dotnet skills[/]");
+        AnsiConsole.Markup("[orangered1]  🦀[/]");
+        AnsiConsole.MarkupLine("[bold blueviolet]  DotnetClaw - Personal AI Assistant in .NET — powered by Microsoft Semantic Kernel[/]");
+        AnsiConsole.Markup("[orangered1]  🦞[/]");
+        AnsiConsole.MarkupLine("[grey]  OpenClaw-inspired agentic loop with Skills, custom Agents and Telegram bot channel[/]");
         AnsiConsole.WriteLine();
         AnsiConsole.MarkupLine("[grey]  Type [white]help[/] for commands, [white]exit[/] to quit, [white]reset[/] to clear context.[/]");
         AnsiConsole.Write(new Rule().RuleStyle("grey"));
@@ -47,7 +49,7 @@ public sealed class SpectreConsoleRenderer : IConsoleRenderer
     public void BeginAssistantTurn()
     {
         _inAssistantTurn = true;
-        AnsiConsole.Markup("[bold cyan]🦀 DotnetClaw:[/] ");
+        AnsiConsole.Markup("[bold blueviolet]🦀 DotnetClaw:[/] ");
     }
 
     public void WriteChunk(string text)
@@ -109,10 +111,10 @@ public sealed class SpectreConsoleRenderer : IConsoleRenderer
 
         var table = new Table()
             .Border(TableBorder.Rounded)
-            .BorderStyle(new Style(Color.Cyan1))
-            .AddColumn(new TableColumn("[bold cyan]Document[/]"))
-            .AddColumn(new TableColumn("[bold cyan]Modified[/]"))
-            .AddColumn(new TableColumn("[bold cyan]Size[/]").RightAligned());
+            .BorderStyle(new Style(Color.BlueViolet))
+            .AddColumn(new TableColumn("[bold blueviolet]Document[/]"))
+            .AddColumn(new TableColumn("[bold blueviolet]Modified[/]"))
+            .AddColumn(new TableColumn("[bold blueviolet]Size[/]").RightAligned());
 
         foreach (var doc in result.Documents)
         {
@@ -122,7 +124,7 @@ public sealed class SpectreConsoleRenderer : IConsoleRenderer
                 $"[grey]{doc.Content.Length:N0} chars[/]");
         }
 
-        AnsiConsole.MarkupLine($"[bold cyan]📂 Workspace loaded[/] [grey]({Markup.Escape(result.WorkspacePath)})[/]");
+        AnsiConsole.MarkupLine($"[bold blueviolet]📂 Workspace loaded[/] [grey]({Markup.Escape(result.WorkspacePath)})[/]");
         AnsiConsole.Write(table);
         AnsiConsole.WriteLine();
     }

@@ -1,53 +1,50 @@
 # 🦀 DotnetClaw
 
-> An OpenClaw-inspired AI Assistant built on **.NET 10** and **Microsoft Semantic Kernel**'s Agent Framework.
+> 🦞 OpenClaw-inspired Personal AI Assistant built on **.NET 10** and **Microsoft Semantic Kernel**'s Agent Framework.
 
 ---
 
-## Architecture
+### Prerequisites
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
+- An OpenAI API key (or Azure OpenAI / Anthropic — see providers)
 
+### Run
+
+```bash
+# Set your API key
+set OPENAI_API_KEY=sk-...
+
+# Restore & run
+cd src/DotnetClaw
+dotnet run
 ```
-DotnetClaw/
-├── workspace/                      ← Identity documents (loaded every session)
-│   ├── SOUL.md                     ← Agent personality & values
-│   ├── AGENTS.md                   ← Tool-use rules & orchestration behaviour
-│   ├── USER.md                     ← User profile & preferences
-│   ├── CONTEXT.md                  ← Current project / session context
-│   ├── MEMORY.md                   ← Persistent facts across resets
-│   └── <custom>.md                 ← Any additional documents
-├── src/DotnetClaw/
-│   ├── Program.cs                  ← Entry point + REPL loop
-│   ├── appsettings.json            ← Configuration
-│   ├── Config/
-│   │   └── DotnetClawOptions.cs    ← Typed config model
-│   ├── Workspace/
-│   │   ├── WorkspaceDocument.cs    ← Typed record for a loaded identity doc
-│   │   └── WorkspaceLoader.cs      ← Scans ./workspace, loads in priority order
-│   ├── Agents/
-│   │   ├── ClawAgentLoop.cs        ← Core agentic loop (SK ChatCompletionAgent)
-│   │   └── KernelFactory.cs        ← Kernel + plugin wiring, provider selection
-│   ├── Telegram/
-│   │   ├── TelegramModels.cs         ← TelegramUpdate, Message, Chat, User, ApiResponse<T>
-│   │   ├── TelegramBotClient.cs      ← ITelegramBotClient + raw HttpClient impl
-│   │   ├── TelegramCommandRouter.cs  ← Command parser + dispatch to agent/Cursor
-│   │   └── TelegramPollingService.cs ← IHostedService long-poll loop
-│   │   ├── ShellPlugin.cs          ← run_command, list_directory
-│   │   ├── FileSystemPlugin.cs     ← read/write/find files
-│   │   ├── DotnetPlugin.cs         ← .csproj / C# project analysis
-│   │   ├── WorkspacePlugin.cs      ← Runtime workspace query skill
-│   │   ├── CursorPlugin.cs         ← cursor_agent / cursor_plan / cursor_ask / cursor_run
-│   │   ├── CursorTypes.cs          ← CursorMode enum, CursorResult
-│   │   ├── CursorProcessRunner.cs  ← ICursorProcessRunner + real OS process impl
-│   │   └── TelegramPlugin.cs       ← send_telegram_message, send_telegram_notification
-│   └── UI/
-│       └── SpectreConsoleRenderer.cs ← Rich terminal UI via Spectre.Console
-└── tests/DotnetClaw.Tests/
-    ├── ShellPluginTests.cs
-    ├── FileSystemPluginTests.cs
-    ├── WorkspaceLoaderTests.cs
-    ├── CursorPluginTests.cs        ← FakeCursorProcessRunner, all modes + edge cases
-    ├── TelegramBotClientTests.cs   ← MockHttpMessageHandler, send/receive/split
-    └── TelegramCommandRouterTests.cs ← Command parsing, routing, Markdown escaping
+
+### Configuration
+
+| Environment Variable        | Description                          | Default  |
+|-----------------------------|--------------------------------------|----------|
+| `DOTNETCLAW_PROVIDER`       | `openai` \| `azure` \| `anthropic`   | `openai` |
+| `OPENAI_API_KEY`            | OpenAI API key                       | —        |
+| `AZURE_OPENAI_ENDPOINT`     | Azure OpenAI endpoint URL            | —        |
+| `AZURE_OPENAI_API_KEY`      | Azure OpenAI key                     | —        |
+| `AZURE_OPENAI_DEPLOYMENT`   | Azure deployment name                | Model ID |
+
+Or edit `appsettings.json` directly.
+
+### REPL Commands
+
+| Command   | Action                          |
+|-----------|---------------------------------|
+| `help`    | Show available commands         |
+| `reset`   | Clear conversation history      |
+| `history` | Print full conversation history |
+| `exit`    | Quit                            |
+
+### Run Tests
+
+```bash
+cd tests/DotnetClaw.Tests
+dotnet test
 ```
 
 ## Agentic Loop
@@ -113,51 +110,6 @@ The agent can query workspace docs mid-conversation via the `Workspace` plugin:
 
 ---
 
-
-
-### Prerequisites
-- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
-- An OpenAI API key (or Azure OpenAI / Anthropic — see providers)
-
-### Run
-
-```bash
-# Set your API key
-export OPENAI_API_KEY=sk-...
-
-# Restore & run
-cd src/DotnetClaw
-dotnet run
-```
-
-### Configuration
-
-| Environment Variable        | Description                          | Default  |
-|-----------------------------|--------------------------------------|----------|
-| `DOTNETCLAW_PROVIDER`       | `openai` \| `azure` \| `anthropic`   | `openai` |
-| `OPENAI_API_KEY`            | OpenAI API key                       | —        |
-| `AZURE_OPENAI_ENDPOINT`     | Azure OpenAI endpoint URL            | —        |
-| `AZURE_OPENAI_API_KEY`      | Azure OpenAI key                     | —        |
-| `AZURE_OPENAI_DEPLOYMENT`   | Azure deployment name                | Model ID |
-
-Or edit `appsettings.json` directly.
-
-### REPL Commands
-
-| Command   | Action                          |
-|-----------|---------------------------------|
-| `help`    | Show available commands         |
-| `reset`   | Clear conversation history      |
-| `history` | Print full conversation history |
-| `exit`    | Quit                            |
-
-### Run Tests
-
-```bash
-cd tests/DotnetClaw.Tests
-dotnet test
-```
-
 ## Skills (Plugins)
 
 ### Shell
@@ -192,7 +144,7 @@ dotnet test
 | `reload_workspace`        | Force reload all docs from disk                    |
 | `get_workspace_context`   | Full combined context block (as injected)          |
 
-### Cursor (agent.exe)
+### Cursor CLI (agent)
 | Function       | Mode    | File changes? | Description                                   |
 |----------------|---------|---------------|-----------------------------------------------|
 | `cursor_agent` | `agent` | ✅ Yes        | Autonomous coding — reads, plans, edits files |
@@ -555,6 +507,52 @@ TelegramCommandRouter         ← Parses /commands and free text
         ▼
 ITelegramBotClient            ← Raw HttpClient, no SDK
   sendMessage (MarkdownV2, auto-splits >4000 chars, retries as plain text on parse error)
+```
+
+## Solution structure
+
+```
+DotnetClaw/
+├── workspace/                      ← Identity documents (loaded every session)
+│   ├── SOUL.md                     ← Agent personality & values
+│   ├── AGENTS.md                   ← Tool-use rules & orchestration behaviour
+│   ├── USER.md                     ← User profile & preferences
+│   ├── CONTEXT.md                  ← Current project / session context
+│   ├── MEMORY.md                   ← Persistent facts across resets
+│   └── <custom>.md                 ← Any additional documents
+├── src/DotnetClaw/
+│   ├── Program.cs                  ← Entry point + REPL loop
+│   ├── appsettings.json            ← Configuration
+│   ├── Config/
+│   │   └── DotnetClawOptions.cs    ← Typed config model
+│   ├── Workspace/
+│   │   ├── WorkspaceDocument.cs    ← Typed record for a loaded identity doc
+│   │   └── WorkspaceLoader.cs      ← Scans ./workspace, loads in priority order
+│   ├── Agents/
+│   │   ├── ClawAgentLoop.cs        ← Core agentic loop (SK ChatCompletionAgent)
+│   │   └── KernelFactory.cs        ← Kernel + plugin wiring, provider selection
+│   ├── Telegram/
+│   │   ├── TelegramModels.cs         ← TelegramUpdate, Message, Chat, User, ApiResponse<T>
+│   │   ├── TelegramBotClient.cs      ← ITelegramBotClient + raw HttpClient impl
+│   │   ├── TelegramCommandRouter.cs  ← Command parser + dispatch to agent/Cursor
+│   │   └── TelegramPollingService.cs ← IHostedService long-poll loop
+│   │   ├── ShellPlugin.cs          ← run_command, list_directory
+│   │   ├── FileSystemPlugin.cs     ← read/write/find files
+│   │   ├── DotnetPlugin.cs         ← .csproj / C# project analysis
+│   │   ├── WorkspacePlugin.cs      ← Runtime workspace query skill
+│   │   ├── CursorPlugin.cs         ← cursor_agent / cursor_plan / cursor_ask / cursor_run
+│   │   ├── CursorTypes.cs          ← CursorMode enum, CursorResult
+│   │   ├── CursorProcessRunner.cs  ← ICursorProcessRunner + real OS process impl
+│   │   └── TelegramPlugin.cs       ← send_telegram_message, send_telegram_notification
+│   └── UI/
+│       └── SpectreConsoleRenderer.cs ← Rich terminal UI via Spectre.Console
+└── tests/DotnetClaw.Tests/
+    ├── ShellPluginTests.cs
+    ├── FileSystemPluginTests.cs
+    ├── WorkspaceLoaderTests.cs
+    ├── CursorPluginTests.cs        ← FakeCursorProcessRunner, all modes + edge cases
+    ├── TelegramBotClientTests.cs   ← MockHttpMessageHandler, send/receive/split
+    └── TelegramCommandRouterTests.cs ← Command parsing, routing, Markdown escaping
 ```
 
 ## License
