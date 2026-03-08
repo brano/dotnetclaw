@@ -80,4 +80,58 @@ public sealed class WorkspacePlugin(WorkspaceLoader loader)
             ? "Workspace is empty — no identity documents were loaded."
             : block;
     }
+
+    [KernelFunction("list_skills")]
+    [Description(
+        "List all skills loaded from the workspace/skills/ directory. " +
+        "Each skill is a how-to guide for a specific capability (e.g. weather, github). " +
+        "Returns skill names, file paths, and last-modified timestamps.")]
+    public async Task<string> ListSkillsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var result = await loader.LoadAsync(cancellationToken);
+
+        if (result.Skills.Count == 0)
+            return $"No skills found in '{result.WorkspacePath}/skills/'.";
+
+        var lines = result.Skills.Select(s =>
+            $"• {s.SkillName,-25} | Modified: {s.FileModifiedAt:yyyy-MM-dd HH:mm}  | {s.FilePath}");
+
+        return $"""
+                Skills directory: {result.WorkspacePath}/skills/
+                Loaded          : {result.LoadedAt:yyyy-MM-dd HH:mm:ss} UTC
+
+                {string.Join("\n", lines)}
+                """;
+    }
+
+    [KernelFunction("get_skill")]
+    [Description(
+        "Retrieve the full SKILL.md content for a specific skill by name. " +
+        "For example: 'weather', 'github', 'copilot-cli'. Name is case-insensitive.")]
+    public async Task<string> GetSkillAsync(
+        [Description("Skill folder name, e.g. 'weather' or 'github'")]
+        string skillName,
+        CancellationToken cancellationToken = default)
+    {
+        var skill = await loader.GetSkillAsync(skillName, cancellationToken);
+
+        if (skill is null)
+        {
+            var result = await loader.LoadAsync(cancellationToken);
+            var available = result.Skills.Count > 0
+                ? string.Join(", ", result.Skills.Select(s => s.SkillName))
+                : "none";
+            return $"[NOT FOUND] No skill named '{skillName}'. Available skills: {available}.";
+        }
+
+        return $"""
+                ── SKILL: {skill.SkillName} ─────────────────────────────────────────
+                File    : {skill.FilePath}
+                Modified: {skill.FileModifiedAt:yyyy-MM-dd HH:mm:ss} UTC
+                ──────────────────────────────────────────────────────────────────────
+
+                {skill.Content}
+                """;
+    }
 }

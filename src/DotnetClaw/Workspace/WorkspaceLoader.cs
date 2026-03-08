@@ -81,6 +81,18 @@ public sealed class WorkspaceLoader(
     }
 
     /// <summary>
+    /// Retrieve a single skill by name (case-insensitive), or null if not loaded.
+    /// </summary>
+    public async Task<SkillDocument?> GetSkillAsync(
+        string skillName,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await LoadAsync(cancellationToken);
+        return result.Skills.FirstOrDefault(s =>
+            s.SkillName.Equals(skillName, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
     /// Build the full context block to be injected into the system prompt.
     /// Returns an empty string when the workspace folder is absent or empty.
     /// </summary>
@@ -89,16 +101,38 @@ public sealed class WorkspaceLoader(
         var result = await LoadAsync(cancellationToken);
         if (result.IsEmpty) return string.Empty;
 
-        var sections = result.Documents.Select(d => d.ToContextBlock());
-        return $"""
-                ── WORKSPACE IDENTITY DOCUMENTS ──────────────────────────────────────────────
-                The following identity documents were loaded from the workspace folder.
-                Treat them as ground truth about who you are, the user, and how agents behave.
+        var parts = new List<string>();
 
-                {string.Join("\n\n", sections)}
+        if (result.Documents.Count > 0)
+        {
+            var sections = result.Documents.Select(d => d.ToContextBlock());
+            parts.Add($"""
+                       ── WORKSPACE IDENTITY DOCUMENTS ──────────────────────────────────────────────
+                       The following identity documents were loaded from the workspace folder.
+                       Treat them as ground truth about who you are, the user, and how agents behave.
 
-                ── END OF WORKSPACE DOCUMENTS ────────────────────────────────────────────────
-                """;
+                       {string.Join("\n\n", sections)}
+
+                       ── END OF WORKSPACE DOCUMENTS ────────────────────────────────────────────────
+                       """);
+        }
+
+        if (result.Skills.Count > 0)
+        {
+            var skillSections = result.Skills.Select(s => s.ToContextBlock());
+            parts.Add($"""
+                       ── WORKSPACE SKILLS ──────────────────────────────────────────────────────────
+                       The following skills are available. Each skill describes how to perform a
+                       specific task using external tools or APIs. Use the relevant skill guide
+                       when the user asks for something that matches a skill name or description.
+
+                       {string.Join("\n\n", skillSections)}
+
+                       ── END OF WORKSPACE SKILLS ───────────────────────────────────────────────────
+                       """);
+        }
+
+        return string.Join("\n\n", parts);
     }
 
     // -------------------------------------------------------------------------
@@ -121,6 +155,7 @@ public sealed class WorkspaceLoader(
             {
                 WorkspacePath = workspacePath,
                 Documents = [],
+                Skills = [],
                 SkippedFiles = [],
                 LoadedAt = DateTimeOffset.UtcNow,
             };
@@ -178,6 +213,7 @@ public sealed class WorkspaceLoader(
         {
             WorkspacePath = workspacePath,
             Documents = docs.AsReadOnly(),
+            Skills = (await LoadSkillsAsync(workspacePath, cancellationToken)).AsReadOnly(),
             SkippedFiles = skipped.AsReadOnly(),
             LoadedAt = DateTimeOffset.UtcNow,
         };
@@ -234,12 +270,85 @@ public sealed class WorkspaceLoader(
             ? configured
             : Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, configured));
     }
+
+    /// <summary>
+    /// Scans <c>workspace/skills/*/SKILL.md</c> and returns a <see cref="SkillDocument"/>
+    /// for each non-empty SKILL.md found. The skill name is taken from the folder name.
+    /// </summary>
+    private async Task<List<SkillDocument>> LoadSkillsAsync(
+        string workspacePath,
+        CancellationToken cancellationToken)
+    {
+        var skillsPath = Path.Combine(workspacePath, WorkspaceDefaults.SkillsFolderName);
+        var skills = new List<SkillDocument>();
+
+        if (!Directory.Exists(skillsPath))
+        {
+            logger.LogDebug("Skills folder not found at '{Path}'. No skills loaded.", skillsPath);
+            return skills;
+        }
+
+        var skillDirs = Directory
+            .EnumerateDirectories(skillsPath)
+            .OrderBy(d => d, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var dir in skillDirs)
+        {
+            var skillName = Path.GetFileName(dir);
+            var skillFile = Path.Combine(dir, WorkspaceDefaults.SkillFileName);
+
+            if (!File.Exists(skillFile))
+            {
+                logger.LogDebug("Skill folder '{Name}' has no SKILL.md — skipping.", skillName);
+                continue;
+            }
+
+            try
+            {
+                var content = await File.ReadAllTextAsync(skillFile, cancellationToken);
+                var fileInfo = new FileInfo(skillFile);
+
+                if (string.IsNullOrWhiteSpace(content))
+                {
+                    logger.LogWarning("Skill '{Name}' SKILL.md is empty — skipping.", skillName);
+                    continue;
+                }
+
+                logger.LogDebug("Loaded skill: {Name} ({Bytes} bytes)", skillName, content.Length);
+
+                skills.Add(new SkillDocument
+                {
+                    SkillName = skillName,
+                    FilePath = skillFile,
+                    Content = content,
+                    LoadedAt = DateTimeOffset.UtcNow,
+                    FileModifiedAt = new DateTimeOffset(fileInfo.LastWriteTimeUtc, TimeSpan.Zero),
+                });
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to read skill '{Name}' from: {Path}", skillName, skillFile);
+            }
+        }
+
+        if (skills.Count > 0)
+            logger.LogInformation("Loaded {Count} skill(s): {Names}",
+                skills.Count, string.Join(", ", skills.Select(s => s.SkillName)));
+
+        return skills;
+    }
 }
 
 /// <summary>Compile-time constants for workspace defaults.</summary>
 public static class WorkspaceDefaults
 {
     public const string FolderName = "workspace";
+
+    /// <summary>Sub-folder inside the workspace that contains skill directories.</summary>
+    public const string SkillsFolderName = "skills";
+
+    /// <summary>The file name that defines a skill inside its folder.</summary>
+    public const string SkillFileName = "SKILL.md";
 
     /// <summary>
     /// The canonical order in which well-known identity documents are injected.
