@@ -1,0 +1,20 @@
+@page "/Error"
+@using Microsoft.AspNetCore.Diagnostics
+@inject IHttpContextAccessor HttpContextAccessor
+
+<PageTitle>Error — DotnetClaw</PageTitle>
+
+<div class="flex flex-col items-center justify-center min-h-full py-24 text-center space-y-4">
+    <div class="flex items-center justify-center w-16 h-16 rounded-full bg-red-900/30 border border-red-700/50">
+        <svg class="w-8 h-8 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+    </div>
+    <h1 class="text-xl font-semibold text-[hsl(213_31%_91%)]">Something went wrong</h1>
+    <p class="text-sm text-[hsl(215.4_16.3%_50%)] max-w-sm">An unexpected error occurred. Please try again or check the logs.</p>
+    <a href="/" class="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-[hsl(220_100%_54%)] text-white text-sm font-medium hover:bg-[hsl(220_100%_46%)] transition-colors">
+        Return to Dashboard
+    </a>
+</div>

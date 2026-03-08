@@ -1,0 +1,46 @@
+@* shadcn-inspired Button component *@
+
+<button type="@Type" class="@ButtonClass" disabled="@Disabled" @onclick="OnClick" @attributes="AdditionalAttributes">
+    @if (Icon is not null)
+    {
+        <span class="mr-2 h-4 w-4">@Icon</span>
+    }
+    @ChildContent
+</button>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public RenderFragment? Icon { get; set; }
+    [Parameter] public string Variant { get; set; } = "default"; // default | secondary | destructive | outline | ghost | link
+    [Parameter] public string Size { get; set; } = "default"; // default | sm | lg | icon
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public string Type { get; set; } = "button";
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public EventCallback OnClick { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string ButtonClass
+    {
+        get
+        {
+            var variantCss = Variant switch
+            {
+                "secondary"   => "bg-[hsl(222.2_47.4%_11.2%)] text-[hsl(210_40%_98%)] hover:bg-[hsl(222.2_47.4%_15%)]",
+                "destructive" => "bg-red-900/40 text-red-300 border border-red-800 hover:bg-red-900/60",
+                "outline"     => "border border-[hsl(216_34%_17%)] bg-transparent text-[hsl(213_31%_91%)] hover:bg-[hsl(216_34%_17%)]",
+                "ghost"       => "bg-transparent text-[hsl(213_31%_91%)] hover:bg-[hsl(216_34%_17%)]",
+                "link"        => "bg-transparent text-[hsl(220_100%_63%)] underline-offset-4 hover:underline p-0 h-auto",
+                _             => "bg-[hsl(220_100%_54%)] text-white hover:bg-[hsl(220_100%_46%)]",
+            };
+            var sizeCss = Size switch
+            {
+                "sm"   => "h-8 px-3 text-xs rounded-md",
+                "lg"   => "h-11 px-8 text-base rounded-md",
+                "icon" => "h-9 w-9 rounded-md",
+                _      => "h-9 px-4 py-2 text-sm rounded-md",
+            };
+            var disabledCss = Disabled ? "opacity-50 cursor-not-allowed pointer-events-none" : "cursor-pointer";
+            return $"inline-flex items-center justify-center font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(220_100%_54%)] focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(224_71%_4%)] {variantCss} {sizeCss} {disabledCss} {Class}";
+        }
+    }
+}

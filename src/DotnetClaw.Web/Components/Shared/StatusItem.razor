@@ -1,0 +1,15 @@
+@* Status key-value item with ok/error indicator *@
+
+<div class="flex items-center justify-between p-2.5 rounded-md bg-[hsl(222.2_47.4%_8%)] border border-[hsl(216_34%_17%)]">
+    <span class="text-xs text-[hsl(215.4_16.3%_50%)]">@Label</span>
+    <div class="flex items-center gap-1.5">
+        <div class="@(IsOk ? "w-1.5 h-1.5 rounded-full bg-emerald-400" : "w-1.5 h-1.5 rounded-full bg-red-400")"></div>
+        <span class="text-xs font-medium text-[hsl(213_31%_91%)]">@Value</span>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Label { get; set; } = string.Empty;
+    [Parameter] public string Value { get; set; } = string.Empty;
+    [Parameter] public bool IsOk { get; set; } = true;
+}

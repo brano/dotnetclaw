@@ -1,0 +1,219 @@
+@page "/telegram"
+@rendermode InteractiveServer
+@inject IOptions<DotnetClawOptions> Options
+@inject AppState AppState
+
+<PageTitle>Telegram — DotnetClaw</PageTitle>
+
+<div class="p-6 space-y-6 animate-fade-in">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-xl font-semibold text-[hsl(213_31%_91%)]">Telegram Configuration</h1>
+            <p class="text-sm text-[hsl(215.4_16.3%_50%)] mt-0.5">Connect and configure your Telegram bot</p>
+        </div>
+        <div class="flex items-center gap-2">
+            @if (Options.Value.Telegram.Enabled && Options.Value.Telegram.IsConfigured)
+            {
+                <Badge Variant="success">
+                    <span class="mr-1.5 inline-block w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                    Connected
+                </Badge>
+            }
+            else if (Options.Value.Telegram.Enabled)
+            {
+                <Badge Variant="warning">Enabled — Not Configured</Badge>
+            }
+            else
+            {
+                <Badge Variant="outline">Disabled</Badge>
+            }
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Left: Config form -->
+        <div class="lg:col-span-2 space-y-4">
+
+            <!-- Bot status card -->
+            <Card Title="Bot Status" Description="Current Telegram bot connection state">
+                <ChildContent>
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-2 gap-3">
+                            <StatusItem
+                                Label="Enabled"
+                                Value="@(Options.Value.Telegram.Enabled ? "Yes" : "No")"
+                                IsOk="@Options.Value.Telegram.Enabled" />
+                            <StatusItem
+                                Label="Configured"
+                                Value="@(Options.Value.Telegram.IsConfigured ? "Yes" : "No")"
+                                IsOk="@Options.Value.Telegram.IsConfigured" />
+                            <StatusItem
+                                Label="Authorized Chats"
+                                Value="@Options.Value.Telegram.AllowedChatIds.Count.ToString()"
+                                IsOk="@(Options.Value.Telegram.AllowedChatIds.Count > 0)" />
+                            <StatusItem
+                                Label="Parse Mode"
+                                Value="@Options.Value.Telegram.ParseMode"
+                                IsOk="true" />
+                        </div>
+
+                        @if (!Options.Value.Telegram.IsConfigured)
+                        {
+                            <div class="flex items-start gap-3 p-3 rounded-md bg-amber-900/20 border border-amber-800/40">
+                                <svg class="w-4 h-4 text-amber-400 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                                    <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                                </svg>
+                                <div>
+                                    <p class="text-sm font-medium text-amber-300">Bot not configured</p>
+                                    <p class="text-xs text-amber-400/80 mt-0.5">Add a bot token and at least one allowed chat ID in <code class="font-mono bg-amber-900/30 px-1 rounded">appsettings.json</code>.</p>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </ChildContent>
+            </Card>
+
+            <!-- Settings display -->
+            <Card Title="Configuration" Description="Read from appsettings.json — edit the file to change settings">
+                <ChildContent>
+                    <div class="space-y-4">
+
+                        <div class="space-y-1.5">
+                            <label class="text-xs font-medium text-[hsl(215.4_16.3%_50%)] uppercase tracking-wide">Bot Token</label>
+                            <div class="flex items-center gap-2">
+                                <div class="flex-1 font-mono text-sm bg-[hsl(216_34%_10%)] border border-[hsl(216_34%_17%)] rounded-md px-3 py-2 text-[hsl(215.4_16.3%_56.9%)]">
+                                    @MaskToken(Options.Value.Telegram.EffectiveBotToken)
+                                </div>
+                                @if (!string.IsNullOrWhiteSpace(Options.Value.Telegram.EffectiveBotToken))
+                                {
+                                    <Badge Variant="success">Set</Badge>
+                                }
+                                else
+                                {
+                                    <Badge Variant="destructive">Missing</Badge>
+                                }
+                            </div>
+                            <p class="text-xs text-[hsl(215.4_16.3%_35%)]">Override via <code class="font-mono">TELEGRAM_BOT_TOKEN</code> env var</p>
+                        </div>
+
+                        <Separator />
+
+                        <div class="space-y-1.5">
+                            <label class="text-xs font-medium text-[hsl(215.4_16.3%_50%)] uppercase tracking-wide">Allowed Chat IDs</label>
+                            @if (Options.Value.Telegram.AllowedChatIds.Count == 0)
+                            {
+                                <div class="p-3 rounded-md bg-red-900/20 border border-red-800/40">
+                                    <p class="text-xs text-red-300">No chat IDs configured — all messages will be blocked.</p>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="flex flex-wrap gap-2">
+                                    @foreach (var chatId in Options.Value.Telegram.AllowedChatIds)
+                                    {
+                                        <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[hsl(216_34%_14%)] border border-[hsl(216_34%_20%)]">
+                                            <div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
+                                            <span class="text-xs font-mono text-[hsl(213_31%_91%)]">@chatId</span>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+
+                        <Separator />
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="space-y-1">
+                                <label class="text-xs font-medium text-[hsl(215.4_16.3%_50%)] uppercase tracking-wide">Poll Timeout</label>
+                                <p class="text-sm font-mono text-[hsl(213_31%_91%)]">@Options.Value.Telegram.LongPollTimeoutSeconds s</p>
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-xs font-medium text-[hsl(215.4_16.3%_50%)] uppercase tracking-wide">Max Updates/Poll</label>
+                                <p class="text-sm font-mono text-[hsl(213_31%_91%)]">@Options.Value.Telegram.MaxUpdatesPerPoll</p>
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-xs font-medium text-[hsl(215.4_16.3%_50%)] uppercase tracking-wide">Max Message Length</label>
+                                <p class="text-sm font-mono text-[hsl(213_31%_91%)]">@Options.Value.Telegram.MaxMessageLength chars</p>
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-xs font-medium text-[hsl(215.4_16.3%_50%)] uppercase tracking-wide">Typing Indicator</label>
+                                <p class="text-sm font-mono text-[hsl(213_31%_91%)]">@(Options.Value.Telegram.SendTypingIndicator ? "Enabled" : "Disabled")</p>
+                            </div>
+                        </div>
+                    </div>
+                </ChildContent>
+            </Card>
+        </div>
+
+        <!-- Right: Help & commands -->
+        <div class="space-y-4">
+
+            <!-- Setup guide -->
+            <Card Title="Setup Guide" Description="Get your bot running in 3 steps">
+                <ChildContent>
+                    <div class="space-y-4">
+                        <SetupStep Number="1" Title="Create a bot" Description="@Step1Desc" />
+                        <SetupStep Number="2" Title="Find your Chat ID" Description="@Step2Desc" />
+                        <SetupStep Number="3" Title="Update config" Description="@Step3Desc" />
+                    </div>
+                </ChildContent>
+            </Card>
+
+            <!-- Bot commands -->
+            <Card Title="Bot Commands" Description="Available Telegram commands">
+                <ChildContent>
+                    <div class="space-y-2">
+                        @foreach (var (cmd, desc) in BotCommands)
+                        {
+                            <div class="flex items-start gap-2">
+                                <code class="text-xs font-mono text-[hsl(220_100%_63%)] bg-[hsl(220_100%_54%/0.1)] px-1.5 py-0.5 rounded shrink-0">@cmd</code>
+                                <span class="text-xs text-[hsl(215.4_16.3%_50%)]">@desc</span>
+                            </div>
+                        }
+                    </div>
+                </ChildContent>
+            </Card>
+
+            <!-- Messages counter -->
+            <Card Title="Activity">
+                <ChildContent>
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs text-[hsl(215.4_16.3%_50%)]">Messages received</span>
+                            <span class="text-sm font-bold text-[hsl(213_31%_91%)]">@AppState.TelegramMessagesReceived</span>
+                        </div>
+                    </div>
+                </ChildContent>
+            </Card>
+        </div>
+    </div>
+</div>
+
+@code {
+    private const string Step1Desc = "Message @BotFather on Telegram and run /newbot to get your token.";
+    private const string Step2Desc = "Message @userinfobot on Telegram to get your numeric chat ID.";
+    private const string Step3Desc = "Add the token and chat ID to appsettings.json under DotnetClaw:Telegram.";
+
+    private static readonly (string cmd, string desc)[] BotCommands =
+    [
+        ("/ask <question>", "Ask DotnetClaw anything"),
+        ("/plan <prompt>", "Cursor plan mode (no edits)"),
+        ("/agent <prompt>", "Cursor agent mode (edits files!)"),
+        ("/cursor_ask <q>", "Cursor ask mode (Q&A)"),
+        ("/reset", "Clear conversation history"),
+        ("/status", "Show bot status"),
+        ("/help", "Show help message"),
+        ("<free text>", "Same as /ask"),
+    ];
+
+    private static string MaskToken(string token)
+    {
+        if (string.IsNullOrWhiteSpace(token)) return "(not set)";
+        if (token.Length <= 10) return "***";
+        return token[..6] + "…" + token[^4..];
+    }
+}

@@ -1,0 +1,12 @@
+@* Summary key-value row used in Onboarding Done step *@
+
+<div class="flex items-center justify-between p-2.5 rounded-md bg-[hsl(222.2_47.4%_8%)] border border-[hsl(216_34%_17%)]">
+    <span class="text-xs text-[hsl(215.4_16.3%_50%)]">@Label</span>
+    <span class="@(IsSuccess ? "text-xs font-medium text-emerald-400" : "text-xs font-medium text-[hsl(213_31%_91%)]")">@Value</span>
+</div>
+
+@code {
+    [Parameter] public string Label { get; set; } = string.Empty;
+    [Parameter] public string Value { get; set; } = string.Empty;
+    [Parameter] public bool IsSuccess { get; set; }
+}

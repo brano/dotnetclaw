@@ -1,0 +1,11 @@
+@* Key-value config row for Dashboard *@
+
+<div class="flex items-center justify-between py-1">
+    <span class="text-xs text-[hsl(215.4_16.3%_50%)]">@Label</span>
+    <span class="text-xs font-medium text-[hsl(213_31%_91%)] font-mono">@Value</span>
+</div>
+
+@code {
+    [Parameter] public string Label { get; set; } = string.Empty;
+    [Parameter] public string Value { get; set; } = string.Empty;
+}

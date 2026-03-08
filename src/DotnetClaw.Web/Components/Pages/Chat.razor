@@ -1,0 +1,273 @@
+@page "/chat"
+@rendermode InteractiveServer
+@inject AgentBridgeService AgentBridge
+@inject ChatService ChatSvc
+@inject AppState AppState
+@inject IJSRuntime JS
+@implements IDisposable
+
+<PageTitle>Chat — DotnetClaw</PageTitle>
+
+<div class="flex flex-col h-full">
+
+    <!-- Chat header -->
+    <div class="flex items-center justify-between px-6 py-4 border-b border-[hsl(216_34%_17%)] shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="flex items-center justify-center w-8 h-8 rounded-full bg-[hsl(220_100%_54%/0.15)] border border-[hsl(220_100%_54%/0.3)]">
+                <svg class="w-4 h-4 text-[hsl(220_100%_63%)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                    <path d="M2 17l10 5 10-5"/>
+                    <path d="M2 12l10 5 10-5"/>
+                </svg>
+            </div>
+            <div>
+                <h2 class="text-sm font-semibold text-[hsl(213_31%_91%)]">DotnetClaw</h2>
+                <div class="flex items-center gap-1.5">
+                    <div class="@(AppState.AgentRunning ? "w-1.5 h-1.5 rounded-full bg-[hsl(220_100%_54%)] animate-pulse" : "w-1.5 h-1.5 rounded-full bg-emerald-400")"></div>
+                    <span class="text-xs text-[hsl(215.4_16.3%_50%)]">@(AppState.AgentRunning ? AppState.AgentStatus : "Online")</span>
+                </div>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            @if (!AgentBridge.IsInitialized)
+            {
+                <Badge Variant="warning">Not initialized</Badge>
+            }
+            else
+            {
+                <Badge Variant="success">Ready</Badge>
+            }
+            <Button Variant="ghost" Size="icon" OnClick="ResetChat" title="Reset conversation">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="23 4 23 10 17 10"/>
+                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                </svg>
+            </Button>
+        </div>
+    </div>
+
+    <!-- Messages area -->
+    <div id="chat-messages" class="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+
+        @if (!ChatSvc.Messages.Any())
+        {
+            <!-- Empty state -->
+            <div class="flex flex-col items-center justify-center h-full text-center py-16 space-y-4">
+                <div class="flex items-center justify-center w-16 h-16 rounded-2xl bg-[hsl(220_100%_54%/0.1)] border border-[hsl(220_100%_54%/0.2)]">
+                    <svg class="w-8 h-8 text-[hsl(220_100%_54%/0.6)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-[hsl(213_31%_91%)]">Start a conversation</p>
+                    <p class="text-xs text-[hsl(215.4_16.3%_40%)] mt-1 max-w-xs">Ask DotnetClaw anything — it can run shell commands, edit files, browse the web, and more.</p>
+                </div>
+                <div class="flex flex-wrap gap-2 justify-center max-w-sm">
+                    @foreach (var suggestion in Suggestions)
+                    {
+                        <button
+                            type="button"
+                            class="px-3 py-1.5 rounded-full text-xs border border-[hsl(216_34%_17%)] text-[hsl(215.4_16.3%_56.9%)] hover:border-[hsl(220_100%_54%/0.4)] hover:text-[hsl(220_100%_74%)] hover:bg-[hsl(220_100%_54%/0.05)] transition-colors"
+                            @onclick="() => SetInput(suggestion)">
+                            @suggestion
+                        </button>
+                    }
+                </div>
+            </div>
+        }
+
+        @foreach (var msg in ChatSvc.Messages)
+        {
+            @if (msg.Role == MessageRole.System)
+            {
+                <div class="flex justify-center">
+                    <span class="text-xs text-[hsl(215.4_16.3%_35%)] bg-[hsl(216_34%_10%)] border border-[hsl(216_34%_17%)] rounded-full px-3 py-1">
+                        @msg.Content
+                    </span>
+                </div>
+            }
+            else if (msg.Role == MessageRole.User)
+            {
+                <div class="flex justify-end">
+                    <div class="max-w-[75%] rounded-2xl rounded-tr-sm bg-[hsl(220_100%_54%)] px-4 py-2.5">
+                        <p class="text-sm text-white leading-relaxed">@msg.Content</p>
+                        <p class="text-[10px] text-white/60 mt-1 text-right">@msg.Timestamp.ToLocalTime().ToString("HH:mm")</p>
+                    </div>
+                </div>
+            }
+            else if (msg.Role == MessageRole.Assistant)
+            {
+                <div class="flex gap-3">
+                    <div class="flex items-center justify-center w-7 h-7 rounded-full bg-[hsl(220_100%_54%/0.15)] border border-[hsl(220_100%_54%/0.3)] shrink-0 mt-0.5">
+                        <svg class="w-3.5 h-3.5 text-[hsl(220_100%_63%)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                        </svg>
+                    </div>
+                    <div class="flex-1 max-w-[80%]">
+                        <div class="rounded-2xl rounded-tl-sm bg-[hsl(222.2_47.4%_8%)] border border-[hsl(216_34%_17%)] px-4 py-2.5">
+                            @if (msg.IsStreaming && string.IsNullOrEmpty(msg.Content))
+                            {
+                                <div class="flex items-center gap-1 py-1">
+                                    <span class="typing-dot w-1.5 h-1.5 rounded-full bg-[hsl(215.4_16.3%_50%)]"></span>
+                                    <span class="typing-dot w-1.5 h-1.5 rounded-full bg-[hsl(215.4_16.3%_50%)]"></span>
+                                    <span class="typing-dot w-1.5 h-1.5 rounded-full bg-[hsl(215.4_16.3%_50%)]"></span>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="chat-prose text-sm text-[hsl(213_31%_91%)] leading-relaxed whitespace-pre-wrap">@msg.Content</div>
+                            }
+                        </div>
+                        <p class="text-[10px] text-[hsl(215.4_16.3%_35%)] mt-1 ml-1">@msg.Timestamp.ToLocalTime().ToString("HH:mm")</p>
+                    </div>
+                </div>
+            }
+            else if (msg.Role == MessageRole.ToolCall)
+            {
+                <div class="flex justify-center">
+                    <div class="flex items-center gap-2 px-3 py-1.5 rounded-md bg-amber-900/20 border border-amber-800/40 max-w-[80%]">
+                        <svg class="w-3.5 h-3.5 text-amber-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                        </svg>
+                        <span class="text-xs text-amber-300 font-mono">@msg.ToolName</span>
+                        <span class="text-xs text-amber-400/60 truncate max-w-xs">@msg.Content</span>
+                    </div>
+                </div>
+            }
+        }
+
+        <div id="chat-bottom"></div>
+    </div>
+
+    <!-- Input area -->
+    <div class="shrink-0 border-t border-[hsl(216_34%_17%)] px-6 py-4">
+        <div class="flex items-end gap-3">
+            <div class="flex-1 relative">
+                <textarea
+                    @ref="textareaRef"
+                    @bind="userInput"
+                    @bind:event="oninput"
+                    @onkeydown="HandleKeyDown"
+                    placeholder="Message DotnetClaw…"
+                    rows="1"
+                    disabled="@AppState.AgentRunning"
+                    class="w-full resize-none rounded-xl border border-[hsl(216_34%_17%)] bg-[hsl(222.2_47.4%_8%)] px-4 py-2.5 text-sm text-[hsl(213_31%_91%)] placeholder:text-[hsl(215.4_16.3%_35%)] focus:outline-none focus:ring-1 focus:ring-[hsl(220_100%_54%)] disabled:opacity-50 disabled:cursor-not-allowed max-h-40 overflow-y-auto leading-relaxed">
+                </textarea>
+                <div class="absolute right-3 bottom-2.5 flex items-center gap-1.5">
+                    <span class="text-[10px] text-[hsl(215.4_16.3%_30%)]">⏎ send</span>
+                </div>
+            </div>
+            <Button
+                Variant="default"
+                Size="icon"
+                Disabled="@(AppState.AgentRunning || string.IsNullOrWhiteSpace(userInput))"
+                OnClick="SendMessage"
+                Class="rounded-xl h-10 w-10 shrink-0">
+                @if (AppState.AgentRunning)
+                {
+                    <svg class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                    </svg>
+                }
+                else
+                {
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="22" y1="2" x2="11" y2="13"/>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                    </svg>
+                }
+            </Button>
+        </div>
+        <p class="text-[10px] text-[hsl(215.4_16.3%_30%)] mt-2">
+            Shift+Enter for new line · DotnetClaw can run shell commands and edit files
+        </p>
+    </div>
+</div>
+
+@code {
+    private string userInput = string.Empty;
+    private ElementReference textareaRef;
+    private CancellationTokenSource? _cts;
+
+    private static readonly string[] Suggestions =
+    [
+        "List files in current directory",
+        "Show git status",
+        "What .NET projects are here?",
+        "Help me write a C# function",
+        "Check system info",
+    ];
+
+    protected override async Task OnInitializedAsync()
+    {
+        ChatSvc.OnMessagesChanged += OnMessagesChanged;
+        AppState.OnChange += StateHasChanged;
+
+        if (!AgentBridge.IsInitialized)
+        {
+            await AgentBridge.InitializeAsync();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await ScrollToBottom();
+    }
+
+    private void OnMessagesChanged()
+    {
+        InvokeAsync(async () =>
+        {
+            StateHasChanged();
+            await ScrollToBottom();
+        });
+    }
+
+    private async Task ScrollToBottom()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("eval",
+                "document.getElementById('chat-bottom')?.scrollIntoView({ behavior: 'smooth' })");
+        }
+        catch { /* ignore JS interop errors during prerender */ }
+    }
+
+    private async Task SendMessage()
+    {
+        var msg = userInput.Trim();
+        if (string.IsNullOrWhiteSpace(msg) || AppState.AgentRunning) return;
+
+        userInput = string.Empty;
+        _cts = new CancellationTokenSource();
+
+        await AgentBridge.SendMessageAsync(msg, ct: _cts.Token);
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey)
+        {
+            await SendMessage();
+        }
+    }
+
+    private void SetInput(string text)
+    {
+        userInput = text;
+        StateHasChanged();
+    }
+
+    private async Task ResetChat()
+    {
+        _cts?.Cancel();
+        await AgentBridge.ResetAsync();
+    }
+
+    public void Dispose()
+    {
+        ChatSvc.OnMessagesChanged -= OnMessagesChanged;
+        AppState.OnChange -= StateHasChanged;
+        _cts?.Dispose();
+    }
+}

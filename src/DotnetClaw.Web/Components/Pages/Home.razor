@@ -1,0 +1,193 @@
+@page "/"
+@rendermode InteractiveServer
+@inject AppState AppState
+@inject AgentBridgeService AgentBridge
+@inject IOptions<DotnetClawOptions> Options
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>Dashboard — DotnetClaw</PageTitle>
+
+<div class="p-6 space-y-6 animate-fade-in">
+
+    <!-- Page header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-xl font-semibold text-[hsl(213_31%_91%)]">Dashboard</h1>
+            <p class="text-sm text-[hsl(215.4_16.3%_50%)] mt-0.5">Monitor your DotnetClaw agent</p>
+        </div>
+        <div class="flex items-center gap-2">
+            @if (!AppState.OnboardingComplete)
+            {
+                <Button Variant="outline" Size="sm" OnClick="GoToOnboarding">
+                    <svg class="w-3.5 h-3.5 mr-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/>
+                    </svg>
+                    Complete Setup
+                </Button>
+            }
+            <Button Variant="default" Size="sm" OnClick="GoToChat">
+                <svg class="w-3.5 h-3.5 mr-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+                Open Chat
+            </Button>
+        </div>
+    </div>
+
+    <!-- Onboarding banner -->
+    @if (!AppState.OnboardingComplete)
+    {
+        <div class="flex items-center gap-4 p-4 rounded-lg bg-[hsl(220_100%_54%/0.08)] border border-[hsl(220_100%_54%/0.25)]">
+            <div class="flex items-center justify-center w-8 h-8 rounded-full bg-[hsl(220_100%_54%/0.15)] shrink-0">
+                <svg class="w-4 h-4 text-[hsl(220_100%_63%)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium text-[hsl(220_100%_74%)]">Setup not complete</p>
+                <p class="text-xs text-[hsl(215.4_16.3%_56.9%)] mt-0.5">Complete the onboarding to configure your AI model and Telegram bot.</p>
+            </div>
+            <Button Variant="outline" Size="sm" OnClick="GoToOnboarding">Setup</Button>
+        </div>
+    }
+
+    <!-- Stats grid -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+            Label="Agent Status"
+            Value="@AppState.AgentStatus"
+            Icon="@StatusIcon"
+            IsActive="@AppState.AgentRunning" />
+        <StatCard
+            Label="Total Turns"
+            Value="@AppState.TotalTurns.ToString()"
+            Icon="@TurnsIcon" />
+        <StatCard
+            Label="Tokens Used"
+            Value="@AppState.TotalTokensUsed.ToString("N0")"
+            Icon="@TokensIcon" />
+        <StatCard
+            Label="Telegram"
+            Value="@(AppState.TelegramConnected ? "Connected" : "Disconnected")"
+            Icon="@TelegramIcon"
+            IsActive="@AppState.TelegramConnected" />
+    </div>
+
+    <!-- Main content grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+        <!-- Agent config card -->
+        <Card Title="Agent Configuration" Description="Active settings" Class="lg:col-span-2">
+            <ChildContent>
+                <div class="space-y-3">
+                    <ConfigRow Label="Model" Value="@Options.Value.ModelId" />
+                    <Separator />
+                    <ConfigRow Label="Max Iterations" Value="@Options.Value.MaxIterations.ToString()" />
+                    <Separator />
+                    <ConfigRow Label="Shell Mode" Value="@(Options.Value.IsShellDevMode ? "Developer (unrestricted)" : $"{Options.Value.AllowedShellCommands.Count} allowed")" />
+                    <Separator />
+                    <ConfigRow Label="Workspace Path" Value="@Options.Value.WorkspacePath" />
+                    <Separator />
+                    <ConfigRow Label="Browser" Value="@($"{Options.Value.Browser.BrowserType} / {(Options.Value.Browser.Headless ? "headless" : "headed")}")" />
+                    <Separator />
+                    <ConfigRow Label="MCP Servers" Value="@($"{Options.Value.Mcp.EnabledServers.Count()} enabled")" />
+                </div>
+            </ChildContent>
+        </Card>
+
+        <!-- Quick actions -->
+        <div class="space-y-4">
+            <Card Title="Quick Actions">
+                <ChildContent>
+                    <div class="space-y-2">
+                        <QuickActionButton Icon="💬" Label="Start a conversation" OnClick="GoToChat" />
+                        <QuickActionButton Icon="⚡" Label="View skills" OnClick="GoToSkills" />
+                        <QuickActionButton Icon="📱" Label="Configure Telegram" OnClick="GoToTelegram" />
+                        <QuickActionButton Icon="⚙️" Label="Onboarding setup" OnClick="GoToOnboarding" />
+                    </div>
+                </ChildContent>
+            </Card>
+
+            <Card Title="Last Activity">
+                <ChildContent>
+                    @if (AppState.LastActivityAt.HasValue)
+                    {
+                        <div class="space-y-1">
+                            <p class="text-sm text-[hsl(213_31%_91%)]">@AppState.LastActivityAt.Value.ToLocalTime().ToString("HH:mm:ss")</p>
+                            <p class="text-xs text-[hsl(215.4_16.3%_40%)]">@AppState.LastActivityAt.Value.ToLocalTime().ToString("dddd, MMM d")</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-sm text-[hsl(215.4_16.3%_40%)]">No activity yet</p>
+                    }
+                </ChildContent>
+            </Card>
+        </div>
+    </div>
+
+    <!-- System prompt preview -->
+    <Card Title="System Prompt" Description="Effective prompt including workspace documents">
+        <ChildContent>
+            @if (string.IsNullOrWhiteSpace(AgentBridge.EffectiveSystemPrompt))
+            {
+                <p class="text-sm text-[hsl(215.4_16.3%_40%)] italic">Agent not initialized yet. Open Chat to initialize.</p>
+            }
+            else
+            {
+                <pre class="text-xs font-mono text-[hsl(215.4_16.3%_56.9%)] bg-[hsl(216_34%_10%)] border border-[hsl(216_34%_17%)] rounded-md p-3 overflow-auto max-h-40 whitespace-pre-wrap">@PromptPreview</pre>
+            }
+        </ChildContent>
+    </Card>
+</div>
+
+@code {
+    private string PromptPreview => AgentBridge.EffectiveSystemPrompt.Length > 800
+        ? AgentBridge.EffectiveSystemPrompt[..800] + "\n…"
+        : AgentBridge.EffectiveSystemPrompt;
+
+    protected override void OnInitialized()
+    {
+        AppState.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        AppState.OnChange -= StateHasChanged;
+    }
+
+    private void GoToChat() => Nav.NavigateTo("/chat");
+    private void GoToSkills() => Nav.NavigateTo("/skills");
+    private void GoToTelegram() => Nav.NavigateTo("/telegram");
+    private void GoToOnboarding() => Nav.NavigateTo("/onboarding");
+
+    private static readonly string StatusIcon = """
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+        </svg>
+        """;
+
+    private static readonly string TurnsIcon = """
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 4 23 10 17 10"/>
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+        </svg>
+        """;
+
+    private static readonly string TokensIcon = """
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+            <path d="M2 17l10 5 10-5"/>
+            <path d="M2 12l10 5 10-5"/>
+        </svg>
+        """;
+
+    private static readonly string TelegramIcon = """
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="22" y1="2" x2="11" y2="13"/>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
+        """;
+}

@@ -1,0 +1,17 @@
+@* Numbered setup step used in Telegram guide *@
+
+<div class="flex items-start gap-3">
+    <div class="flex items-center justify-center w-6 h-6 rounded-full bg-[hsl(220_100%_54%/0.15)] border border-[hsl(220_100%_54%/0.3)] shrink-0 mt-0.5">
+        <span class="text-xs font-bold text-[hsl(220_100%_63%)]">@Number</span>
+    </div>
+    <div>
+        <p class="text-sm font-medium text-[hsl(213_31%_91%)]">@Title</p>
+        <p class="text-xs text-[hsl(215.4_16.3%_40%)] mt-0.5">@Description</p>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int Number { get; set; }
+    [Parameter] public string Title { get; set; } = string.Empty;
+    [Parameter] public string Description { get; set; } = string.Empty;
+}
