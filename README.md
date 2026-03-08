@@ -2,6 +2,8 @@
 
 > 🦞 OpenClaw-inspired Personal AI Assistant built on **.NET 10** and **Microsoft Semantic Kernel**'s Agent Framework.
 
+<img width="1105" height="245" alt="image" src="https://github.com/user-attachments/assets/281b4dd4-bfff-49af-a4dc-4393ea122215" />
+
 ---
 
 ### Prerequisites
