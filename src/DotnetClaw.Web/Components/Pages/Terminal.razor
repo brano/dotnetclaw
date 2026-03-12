@@ -1,0 +1,205 @@
+@page "/terminal"
+@rendermode InteractiveServer
+@inject TerminalService TerminalSvc
+@inject AppState AppState
+@inject IJSRuntime JS
+@implements IDisposable
+
+<PageTitle>Terminal — DotnetClaw</PageTitle>
+
+<div class="flex flex-col h-full" style="background:#020817;">
+
+    <!-- ── Title bar ────────────────────────────────────────────────────── -->
+    <div class="flex items-center justify-between px-4 py-2 border-b border-[hsl(216_34%_17%)] shrink-0"
+         style="background:hsl(222.2,47.4%,4%);">
+
+        <!-- Left: traffic-light dots + title -->
+        <div class="flex items-center gap-3">
+            <div class="flex items-center gap-1.5 ml-1">
+                <div class="w-3 h-3 rounded-full" style="background:#ef4444;opacity:.75;"></div>
+                <div class="w-3 h-3 rounded-full" style="background:#eab308;opacity:.75;"></div>
+                <div class="w-3 h-3 rounded-full" style="background:#22c55e;opacity:.75;"></div>
+            </div>
+            <span class="text-xs font-mono" style="color:hsl(215.4,16.3%,50%);">
+                DotnetClaw — Web Terminal
+            </span>
+            @if (_connectedCount > 1)
+            {
+                <span class="text-[10px] font-mono px-1.5 py-0.5 rounded"
+                      style="background:rgba(59,130,246,.15);color:#60a5fa;border:1px solid rgba(59,130,246,.3);">
+                    @_connectedCount viewers
+                </span>
+            }
+        </div>
+
+        <!-- Right: status + controls -->
+        <div class="flex items-center gap-3">
+            @if (AppState.AgentRunning)
+            {
+                <div class="flex items-center gap-1.5">
+                    <span class="flex h-2 w-2 rounded-full animate-pulse" style="background:#3b82f6;"></span>
+                    <span class="text-[10px] font-mono" style="color:#60a5fa;">@AppState.AgentStatus</span>
+                </div>
+            }
+            else
+            {
+                <div class="flex items-center gap-1.5">
+                    <span class="flex h-2 w-2 rounded-full" style="background:#22c55e;"></span>
+                    <span class="text-[10px] font-mono" style="color:hsl(215.4,16.3%,50%);">
+                        @(TerminalSvc.IsInitialized ? "Ready" : "Initialising…")
+                    </span>
+                </div>
+            }
+
+            <button type="button"
+                    @onclick="HandleCancelClick"
+                    disabled="@(!AppState.AgentRunning)"
+                    title="Cancel current operation (Ctrl+C)"
+                    class="flex items-center gap-1 text-[11px] font-mono px-2.5 py-1 rounded transition-colors
+                           disabled:opacity-30 disabled:cursor-not-allowed"
+                    style="border:1px solid hsl(216,34%,17%);color:hsl(215.4,16.3%,50%);">
+                <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="15" y1="9" x2="9" y2="15"/>
+                    <line x1="9" y1="9" x2="15" y2="15"/>
+                </svg>
+                Cancel
+            </button>
+
+            <button type="button"
+                    @onclick="HandleClearClick"
+                    title="Clear terminal (Ctrl+L)"
+                    class="text-[11px] font-mono px-2.5 py-1 rounded transition-colors"
+                    style="border:1px solid hsl(216,34%,17%);color:hsl(215.4,16.3%,50%);">
+                Clear
+            </button>
+        </div>
+    </div>
+
+    <!-- ── xterm.js mount point ──────────────────────────────────────────── -->
+    <div id="terminal-container"
+         @onclick="HandleContainerClick"
+         class="flex-1 min-h-0 overflow-hidden"
+         style="padding:6px 10px;cursor:text;">
+    </div>
+
+</div>
+
+@code {
+    private DotNetObjectReference<Terminal>? _dotNetRef;
+    private bool _xtermReady;
+
+    // Track how many browser tabs are watching (shared singleton)
+    private static int _connectedCount;
+
+    // ── Lifecycle ──────────────────────────────────────────────────────────
+
+    protected override void OnInitialized()
+    {
+        Interlocked.Increment(ref _connectedCount);
+        AppState.OnChange += OnStateChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        _dotNetRef = DotNetObjectReference.Create(this);
+
+        try
+        {
+            await JS.InvokeVoidAsync("terminalInit", "terminal-container", _dotNetRef);
+            _xtermReady = true;
+
+            if (!TerminalSvc.IsInitialized)
+            {
+                // Subscribe before initialising so the banner + prompt flow through
+                TerminalSvc.OnOutput += OnTerminalOutput;
+                await TerminalSvc.InitializeAsync();
+            }
+            else
+            {
+                // Replay the existing buffer for this new connection, then subscribe
+                var buffer = TerminalSvc.GetBufferedOutput();
+                if (!string.IsNullOrEmpty(buffer))
+                    await JS.InvokeVoidAsync("terminalWrite", buffer);
+
+                TerminalSvc.OnOutput += OnTerminalOutput;
+            }
+        }
+        catch (JSException)
+        {
+            // JS interop may fail during pre-render — silently ignored
+        }
+    }
+
+    // ── JS-invokable callbacks (called from terminal-interop.js) ───────────
+
+    /// <summary>Called by xterm.js when the user presses Enter.</summary>
+    [JSInvokable]
+    public async Task HandleInputLine(string line)
+        => await TerminalSvc.HandleInputAsync(line);
+
+    /// <summary>Called by xterm.js when the user presses Ctrl+C.</summary>
+    [JSInvokable]
+    public void CancelInput()
+        => TerminalSvc.CancelCurrent();
+
+    // ── UI button handlers ─────────────────────────────────────────────────
+
+    private async Task HandleCancelClick()
+    {
+        TerminalSvc.CancelCurrent();
+        await TryWriteAsync("\r\n\x1b[33m[Cancelled]\x1b[0m\r\n");
+    }
+
+    private async Task HandleClearClick()
+    {
+        await TryWriteAsync("\x1b[2J\x1b[H");
+        await TryFocusAsync();
+    }
+
+    private async Task HandleContainerClick()
+        => await TryFocusAsync();
+
+    // ── Output event from TerminalService ─────────────────────────────────
+
+    private void OnTerminalOutput(string text)
+    {
+        _ = InvokeAsync(async () =>
+        {
+            await TryWriteAsync(text);
+        });
+    }
+
+    private void OnStateChanged()
+        => InvokeAsync(StateHasChanged);
+
+    // ── Helpers ────────────────────────────────────────────────────────────
+
+    private async Task TryWriteAsync(string text)
+    {
+        if (!_xtermReady) return;
+        try { await JS.InvokeVoidAsync("terminalWrite", text); }
+        catch { /* circuit disconnected */ }
+    }
+
+    private async Task TryFocusAsync()
+    {
+        try { await JS.InvokeVoidAsync("terminalFocus"); }
+        catch { /* ignore */ }
+    }
+
+    // ── Dispose ────────────────────────────────────────────────────────────
+
+    public void Dispose()
+    {
+        Interlocked.Decrement(ref _connectedCount);
+        AppState.OnChange -= OnStateChanged;
+        TerminalSvc.OnOutput -= OnTerminalOutput;
+        _dotNetRef?.Dispose();
+
+        try { _ = JS.InvokeVoidAsync("terminalDispose"); }
+        catch { /* ignore during disposal */ }
+    }
+}

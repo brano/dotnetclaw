@@ -100,12 +100,19 @@
     <link rel="stylesheet" href="@Assets["app.css"]" />
     <ImportMap />
     <link rel="icon" type="image/png" href="favicon.png" />
+
+    <!-- xterm.js — terminal emulator used by the /terminal page -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
+
     <HeadOutlet />
 </head>
 
 <body class="bg-[hsl(224_71%_4%)] text-[hsl(213_31%_91%)] font-sans antialiased">
     <Routes />
     <ReconnectModal />
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
+    <script src="js/terminal-interop.js"></script>
     <script src="@Assets["_framework/blazor.web.js"]"></script>
 </body>
 

@@ -92,7 +92,8 @@ builder.Services
     .AddHttpContextAccessor()
     .AddSingleton<AppState>()
     .AddScoped<ChatService>()
-    .AddScoped<AgentBridgeService>();
+    .AddScoped<AgentBridgeService>()
+    .AddSingleton<TerminalService>();
 
 var app = builder.Build();
 

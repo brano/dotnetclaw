@@ -15,8 +15,8 @@
                 </svg>
             </div>
             <div>
-                <span class="text-sm font-semibold text-[hsl(213_31%_91%)]">DotnetClaw</span>
-                <p class="text-[10px] text-[hsl(215.4_16.3%_40%)] leading-tight">AI Assistant</p>
+                <span class="text-sm font-semibold text-[hsl(213_31%_91%)]">🦀 DotnetClaw</span>
+                <p class="text-[10px] text-[hsl(215.4_16.3%_40%)] leading-tight">Minimalistic AI Assistant</p>
             </div>
         </div>
 
@@ -46,6 +46,18 @@
                     <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
                 </svg>
                 Skills
+            </NavLink>
+
+            <NavLink href="/terminal" class="nav-item" ActiveClass="nav-link-active">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="4 17 10 11 4 5"/>
+                    <line x1="12" y1="19" x2="20" y2="19"/>
+                </svg>
+                Terminal
+                @if (AppState.AgentRunning)
+                {
+                    <span class="ml-auto flex h-2 w-2 rounded-full bg-[hsl(220_100%_54%)] animate-pulse"></span>
+                }
             </NavLink>
 
             <NavLink href="/telegram" class="nav-item" ActiveClass="nav-link-active">

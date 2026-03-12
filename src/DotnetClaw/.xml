@@ -1281,6 +1281,27 @@
             Inspired by OpenClaw's colour-coded tool-call display.
             </summary>
         </member>
+        <member name="T:DotnetClaw.UI.TerminalAnsiRenderer">
+             <summary>
+             IConsoleRenderer implementation that emits VT100/ANSI escape sequences
+             for rendering in a web terminal emulator (xterm.js).
+            
+             All output is normalised to CRLF line endings because xterm.js in
+             non-convertEol mode requires explicit \r\n for newlines.
+             </summary>
+        </member>
+        <member name="M:DotnetClaw.UI.TerminalAnsiRenderer.#ctor(System.Action{System.String})">
+             <summary>
+             IConsoleRenderer implementation that emits VT100/ANSI escape sequences
+             for rendering in a web terminal emulator (xterm.js).
+            
+             All output is normalised to CRLF line endings because xterm.js in
+             non-convertEol mode requires explicit \r\n for newlines.
+             </summary>
+        </member>
+        <member name="M:DotnetClaw.UI.TerminalAnsiRenderer.Crlf(System.String)">
+            <summary>Normalize line endings to CRLF for xterm.js compatibility.</summary>
+        </member>
         <member name="T:DotnetClaw.Workspace.WorkspaceDocument">
             <summary>
             Represents a single identity / context document loaded from the workspace folder.
