@@ -786,10 +786,10 @@
                plan             — Cursor produces a structured step-by-step plan, no file changes.
                ask              — Cursor answers questions about the codebase, read-only.
             
-             CLI invocation format built by this plugin:
-               agent --mode=agent  --prompt "..."  [--model ...]  [--yes]  [extraFlags]  &lt;workspace&gt;
-               agent --mode=plan   --prompt "..."  [--model ...]  [extraFlags]             &lt;workspace&gt;
-               agent --mode=ask    --prompt "..."  [--model ...]  [extraFlags]             &lt;workspace&gt;
+             CLI invocation format built by this plugin (matches cursor-agent CLI):
+               agent -p --mode=agent  "prompt"  [--model ...]  [--yes]  --trust "&lt;workspace&gt;"  [extraFlags]
+               agent -p --mode=plan   "prompt"  [--model ...]  --trust "&lt;workspace&gt;"  [extraFlags]
+               agent -p --mode=ask    "prompt"  [--model ...]  --trust "&lt;workspace&gt;"  [extraFlags]
              </summary>
         </member>
         <member name="M:DotnetClaw.Plugins.CursorPlugin.#ctor(DotnetClaw.Plugins.ICursorProcessRunner,Microsoft.Extensions.Options.IOptions{DotnetClaw.Config.CursorOptions},DotnetClaw.UI.IConsoleRenderer,Microsoft.Extensions.Logging.ILogger{DotnetClaw.Plugins.CursorPlugin})">
@@ -803,10 +803,10 @@
                plan             — Cursor produces a structured step-by-step plan, no file changes.
                ask              — Cursor answers questions about the codebase, read-only.
             
-             CLI invocation format built by this plugin:
-               agent --mode=agent  --prompt "..."  [--model ...]  [--yes]  [extraFlags]  &lt;workspace&gt;
-               agent --mode=plan   --prompt "..."  [--model ...]  [extraFlags]             &lt;workspace&gt;
-               agent --mode=ask    --prompt "..."  [--model ...]  [extraFlags]             &lt;workspace&gt;
+             CLI invocation format built by this plugin (matches cursor-agent CLI):
+               agent -p --mode=agent  "prompt"  [--model ...]  [--yes]  --trust "&lt;workspace&gt;"  [extraFlags]
+               agent -p --mode=plan   "prompt"  [--model ...]  --trust "&lt;workspace&gt;"  [extraFlags]
+               agent -p --mode=ask    "prompt"  [--model ...]  --trust "&lt;workspace&gt;"  [extraFlags]
              </summary>
         </member>
         <member name="M:DotnetClaw.Plugins.CursorPlugin.CursorAgentAsync(System.String,System.String,System.Nullable{System.Int32},System.Threading.CancellationToken)">
@@ -840,8 +840,8 @@
              <summary>
              Build the argument string for the Cursor CLI.
             
-             Final command structure:
-               agent --mode=&lt;mode&gt;  --prompt "&lt;prompt&gt;"  [--model &lt;model&gt;]  [--yes]  [extraFlags]  &lt;workspace&gt;
+             Final command structure (matches cursor-agent CLI):
+               agent -p --mode=&lt;mode&gt; "&lt;prompt&gt;" [--model &lt;model&gt;] [--yes] --trust "&lt;workspace&gt;" [extraFlags]
              </summary>
         </member>
         <member name="M:DotnetClaw.Plugins.CursorPlugin.ShellQuote(System.String)">

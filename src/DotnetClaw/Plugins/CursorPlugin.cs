@@ -19,10 +19,10 @@ namespace DotnetClaw.Plugins;
 ///   plan             — Cursor produces a structured step-by-step plan, no file changes.
 ///   ask              — Cursor answers questions about the codebase, read-only.
 ///
-/// CLI invocation format built by this plugin:
-///   agent --mode=agent  --prompt "..."  [--model ...]  [--yes]  [extraFlags]  &lt;workspace&gt;
-///   agent --mode=plan   --prompt "..."  [--model ...]  [extraFlags]             &lt;workspace&gt;
-///   agent --mode=ask    --prompt "..."  [--model ...]  [extraFlags]             &lt;workspace&gt;
+/// CLI invocation format built by this plugin (matches cursor-agent CLI):
+///   agent -p --mode=agent  "prompt"  [--model ...]  [--yes]  --trust "&lt;workspace&gt;"  [extraFlags]
+///   agent -p --mode=plan   "prompt"  [--model ...]  --trust "&lt;workspace&gt;"  [extraFlags]
+///   agent -p --mode=ask    "prompt"  [--model ...]  --trust "&lt;workspace&gt;"  [extraFlags]
 /// </summary>
 public sealed class CursorPlugin(
     ICursorProcessRunner processRunner,
@@ -252,8 +252,8 @@ public sealed class CursorPlugin(
     /// <summary>
     /// Build the argument string for the Cursor CLI.
     ///
-    /// Final command structure:
-    ///   agent --mode=&lt;mode&gt;  --prompt "&lt;prompt&gt;"  [--model &lt;model&gt;]  [--yes]  [extraFlags]  &lt;workspace&gt;
+    /// Final command structure (matches cursor-agent CLI):
+    ///   agent -p --mode=&lt;mode&gt; "&lt;prompt&gt;" [--model &lt;model&gt;] [--yes] --trust "&lt;workspace&gt;" [extraFlags]
     /// </summary>
     private string BuildArguments(
         CursorMode mode,
@@ -264,11 +264,14 @@ public sealed class CursorPlugin(
     {
         var sb = new StringBuilder();
 
-        // Mode flag
-        sb.Append($"--mode={ModeToFlag(mode)}");
+        // -p for non-interactive (prints response to console; required for headless/script use)
+        sb.Append("-p");
 
-        // Prompt — shell-quoted to handle spaces and special characters
-        sb.Append($" --prompt {ShellQuote(prompt)}");
+        // Mode flag
+        sb.Append($" --mode={ModeToFlag(mode)}");
+
+        // Prompt — positional argument (cursor-agent expects this, not --prompt)
+        sb.Append($" {ShellQuote(prompt)}");
 
         // Model override
         var model = modelOverride ?? _options.Model;
@@ -279,6 +282,9 @@ public sealed class CursorPlugin(
         if (mode == CursorMode.Agent && _options.AutoApproveInAgentMode)
             sb.Append(" --yes");
 
+        // --trust with workspace path (required for headless mode; trusts workspace without prompting)
+        sb.Append($" --trust {ShellQuote(workspace)}");
+
         // Extra flags from config
         if (!string.IsNullOrWhiteSpace(_options.ExtraFlags))
             sb.Append($" {_options.ExtraFlags.Trim()}");
@@ -286,9 +292,6 @@ public sealed class CursorPlugin(
         // Per-call extra flags override
         if (!string.IsNullOrWhiteSpace(extraFlagsOverride))
             sb.Append($" {extraFlagsOverride.Trim()}");
-
-        // Workspace path — always last (positional argument)
-        sb.Append($" {ShellQuote(workspace)}");
 
         return sb.ToString();
     }
