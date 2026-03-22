@@ -1,0 +1,15 @@
+@* Small feature highlight card used in Onboarding *@
+
+<div class="flex items-start gap-3 p-3 rounded-md bg-[hsl(222.2_47.4%_8%)] border border-[hsl(216_34%_17%)]">
+    <span class="text-xl leading-none mt-0.5">@Icon</span>
+    <div>
+        <p class="text-sm font-medium text-[hsl(213_31%_91%)]">@Title</p>
+        <p class="text-xs text-[hsl(215.4_16.3%_40%)] mt-0.5">@Description</p>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Icon { get; set; } = "✨";
+    [Parameter] public string Title { get; set; } = string.Empty;
+    [Parameter] public string Description { get; set; } = string.Empty;
+}

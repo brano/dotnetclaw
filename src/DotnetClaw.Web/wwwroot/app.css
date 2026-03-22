@@ -1,0 +1,70 @@
+/* DotnetClaw Web — custom CSS (Tailwind handles most styling) */
+
+/* Smooth scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: hsl(224 71% 4%);
+}
+::-webkit-scrollbar-thumb {
+    background: hsl(216 34% 22%);
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: hsl(216 34% 30%);
+}
+
+/* Chat message prose */
+.chat-prose pre {
+    background: hsl(216 34% 10%);
+    border: 1px solid hsl(216 34% 17%);
+    border-radius: 0.375rem;
+    padding: 0.75rem 1rem;
+    overflow-x: auto;
+    font-family: 'JetBrains Mono', Consolas, monospace;
+    font-size: 0.8125rem;
+    line-height: 1.6;
+}
+.chat-prose code:not(pre code) {
+    background: hsl(216 34% 14%);
+    border: 1px solid hsl(216 34% 20%);
+    border-radius: 0.25rem;
+    padding: 0.1rem 0.35rem;
+    font-family: 'JetBrains Mono', Consolas, monospace;
+    font-size: 0.8125rem;
+}
+.chat-prose p { margin-bottom: 0.5rem; }
+.chat-prose ul { list-style: disc; padding-left: 1.25rem; margin-bottom: 0.5rem; }
+.chat-prose ol { list-style: decimal; padding-left: 1.25rem; margin-bottom: 0.5rem; }
+
+/* Blazor reconnect modal — hidden by default, styled by component */
+#components-reconnect-modal { display: none; }
+
+/* Sidebar active link glow */
+.nav-link-active {
+    background: hsl(220 100% 54% / 0.15);
+    border-left: 2px solid hsl(220 100% 54%);
+    color: hsl(220 100% 74%);
+}
+
+/* Typing indicator dots */
+@keyframes blink {
+    0%, 80%, 100% { opacity: 0; }
+    40% { opacity: 1; }
+}
+.typing-dot:nth-child(1) { animation: blink 1.4s infinite 0s; }
+.typing-dot:nth-child(2) { animation: blink 1.4s infinite 0.2s; }
+.typing-dot:nth-child(3) { animation: blink 1.4s infinite 0.4s; }
+
+/* Skill badge pulse */
+.skill-active-badge {
+    box-shadow: 0 0 0 0 hsl(220 100% 54% / 0.4);
+    animation: skill-pulse 2s infinite;
+}
+@keyframes skill-pulse {
+    0%   { box-shadow: 0 0 0 0 hsl(220 100% 54% / 0.4); }
+    70%  { box-shadow: 0 0 0 6px hsl(220 100% 54% / 0); }
+    100% { box-shadow: 0 0 0 0 hsl(220 100% 54% / 0); }
+}

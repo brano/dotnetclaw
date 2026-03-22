@@ -1,0 +1,12 @@
+@* shadcn-inspired Separator *@
+
+<div class="@SepClass" role="separator"></div>
+
+@code {
+    [Parameter] public string Orientation { get; set; } = "horizontal"; // horizontal | vertical
+    [Parameter] public string? Class { get; set; }
+
+    private string SepClass => Orientation == "vertical"
+        ? $"inline-block h-full w-px bg-[hsl(216_34%_17%)] {Class}"
+        : $"block h-px w-full bg-[hsl(216_34%_17%)] {Class}";
+}

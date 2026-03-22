@@ -1,0 +1,36 @@
+@using DotnetClaw.Web.Components.Pages
+@* Skill card for the Skills page *@
+
+<div class="rounded-lg border @(Skill.Enabled ? "border-[hsl(216_34%_17%)]" : "border-[hsl(216_34%_12%)] opacity-60") bg-[hsl(222.2_47.4%_6%)] p-4 space-y-3 hover:border-[hsl(216_34%_25%)] transition-colors">
+    <div class="flex items-start justify-between gap-2">
+        <div class="flex items-center gap-2.5">
+            <div class="@(Skill.Enabled ? "w-9 h-9 rounded-lg bg-[hsl(220_100%_54%/0.15)] border border-[hsl(220_100%_54%/0.3)] flex items-center justify-center text-lg" : "w-9 h-9 rounded-lg bg-[hsl(216_34%_14%)] border border-[hsl(216_34%_17%)] flex items-center justify-center text-lg opacity-60")">
+                @Skill.Icon
+            </div>
+            <div>
+                <p class="text-sm font-semibold text-[hsl(213_31%_91%)]">@Skill.Name</p>
+                <Badge Variant="outline" Class="mt-0.5">@Skill.Category</Badge>
+            </div>
+        </div>
+        @if (Skill.Enabled)
+        {
+            <div class="skill-active-badge w-2 h-2 rounded-full bg-[hsl(220_100%_54%)] shrink-0 mt-1.5"></div>
+        }
+    </div>
+
+    <p class="text-xs text-[hsl(215.4_16.3%_50%)] leading-relaxed">@Skill.Description</p>
+
+    <div class="space-y-1.5">
+        <p class="text-[10px] font-semibold uppercase tracking-widest text-[hsl(215.4_16.3%_35%)]">Tools</p>
+        <div class="flex flex-wrap gap-1">
+            @foreach (var tool in Skill.Tools)
+            {
+                <code class="text-[10px] font-mono bg-[hsl(216_34%_12%)] border border-[hsl(216_34%_18%)] text-[hsl(215.4_16.3%_56.9%)] px-1.5 py-0.5 rounded">@tool</code>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public Skills.SkillDefinition Skill { get; set; } = null!;
+}

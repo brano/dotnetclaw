@@ -1,0 +1,18 @@
+@* Quick action button for Dashboard *@
+
+<button
+    type="button"
+    class="w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-left text-sm text-[hsl(215.4_16.3%_56.9%)] hover:bg-[hsl(216_34%_17%)] hover:text-[hsl(213_31%_91%)] transition-colors"
+    @onclick="OnClick">
+    <span class="text-base leading-none">@Icon</span>
+    <span>@Label</span>
+    <svg class="ml-auto w-3.5 h-3.5 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+    </svg>
+</button>
+
+@code {
+    [Parameter] public string Icon { get; set; } = string.Empty;
+    [Parameter] public string Label { get; set; } = string.Empty;
+    [Parameter] public EventCallback OnClick { get; set; }
+}

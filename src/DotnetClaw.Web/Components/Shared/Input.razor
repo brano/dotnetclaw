@@ -1,0 +1,25 @@
+@* shadcn-inspired Input component *@
+
+<input
+    type="@Type"
+    placeholder="@Placeholder"
+    value="@Value"
+    disabled="@Disabled"
+    class="@InputClass"
+    @oninput="OnInput"
+    @onchange="OnChange"
+    @attributes="AdditionalAttributes" />
+
+@code {
+    [Parameter] public string Type { get; set; } = "text";
+    [Parameter] public string? Placeholder { get; set; }
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public EventCallback<ChangeEventArgs> OnInput { get; set; }
+    [Parameter] public EventCallback<ChangeEventArgs> OnChange { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string InputClass =>
+        $"flex h-9 w-full rounded-md border border-[hsl(216_34%_17%)] bg-[hsl(222.2_47.4%_8%)] px-3 py-1 text-sm text-[hsl(213_31%_91%)] shadow-sm transition-colors placeholder:text-[hsl(215.4_16.3%_40%)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[hsl(220_100%_54%)] disabled:cursor-not-allowed disabled:opacity-50 {Class}";
+}

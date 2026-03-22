@@ -786,10 +786,10 @@
                plan             — Cursor produces a structured step-by-step plan, no file changes.
                ask              — Cursor answers questions about the codebase, read-only.
             
-             CLI invocation format built by this plugin:
-               agent --mode=agent  --prompt "..."  [--model ...]  [--yes]  [extraFlags]  &lt;workspace&gt;
-               agent --mode=plan   --prompt "..."  [--model ...]  [extraFlags]             &lt;workspace&gt;
-               agent --mode=ask    --prompt "..."  [--model ...]  [extraFlags]             &lt;workspace&gt;
+             CLI invocation format built by this plugin (matches cursor-agent CLI):
+               agent -p --mode=agent  "prompt"  [--model ...]  [--yes]  --trust "&lt;workspace&gt;"  [extraFlags]
+               agent -p --mode=plan   "prompt"  [--model ...]  --trust "&lt;workspace&gt;"  [extraFlags]
+               agent -p --mode=ask    "prompt"  [--model ...]  --trust "&lt;workspace&gt;"  [extraFlags]
              </summary>
         </member>
         <member name="M:DotnetClaw.Plugins.CursorPlugin.#ctor(DotnetClaw.Plugins.ICursorProcessRunner,Microsoft.Extensions.Options.IOptions{DotnetClaw.Config.CursorOptions},DotnetClaw.UI.IConsoleRenderer,Microsoft.Extensions.Logging.ILogger{DotnetClaw.Plugins.CursorPlugin})">
@@ -803,10 +803,10 @@
                plan             — Cursor produces a structured step-by-step plan, no file changes.
                ask              — Cursor answers questions about the codebase, read-only.
             
-             CLI invocation format built by this plugin:
-               agent --mode=agent  --prompt "..."  [--model ...]  [--yes]  [extraFlags]  &lt;workspace&gt;
-               agent --mode=plan   --prompt "..."  [--model ...]  [extraFlags]             &lt;workspace&gt;
-               agent --mode=ask    --prompt "..."  [--model ...]  [extraFlags]             &lt;workspace&gt;
+             CLI invocation format built by this plugin (matches cursor-agent CLI):
+               agent -p --mode=agent  "prompt"  [--model ...]  [--yes]  --trust "&lt;workspace&gt;"  [extraFlags]
+               agent -p --mode=plan   "prompt"  [--model ...]  --trust "&lt;workspace&gt;"  [extraFlags]
+               agent -p --mode=ask    "prompt"  [--model ...]  --trust "&lt;workspace&gt;"  [extraFlags]
              </summary>
         </member>
         <member name="M:DotnetClaw.Plugins.CursorPlugin.CursorAgentAsync(System.String,System.String,System.Nullable{System.Int32},System.Threading.CancellationToken)">
@@ -840,8 +840,8 @@
              <summary>
              Build the argument string for the Cursor CLI.
             
-             Final command structure:
-               agent --mode=&lt;mode&gt;  --prompt "&lt;prompt&gt;"  [--model &lt;model&gt;]  [--yes]  [extraFlags]  &lt;workspace&gt;
+             Final command structure (matches cursor-agent CLI):
+               agent -p --mode=&lt;mode&gt; "&lt;prompt&gt;" [--model &lt;model&gt;] [--yes] --trust "&lt;workspace&gt;" [extraFlags]
              </summary>
         </member>
         <member name="M:DotnetClaw.Plugins.CursorPlugin.ShellQuote(System.String)">
@@ -1270,6 +1270,30 @@
                  so two messages from the same chat never interleave agent calls
              </summary>
         </member>
+        <member name="T:DotnetClaw.UI.MarkdownAnsiStreamFormatter">
+            <summary>
+            Incrementally converts a practical subset of Markdown to ANSI SGR sequences
+            for terminals (xterm.js and modern Windows / Unix consoles).
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.UI.MarkdownAnsiStreamFormatter.Append(System.String)">
+            <summary>Append a streamed chunk from the model; returns text to write to the terminal (uses CRLF).</summary>
+        </member>
+        <member name="M:DotnetClaw.UI.MarkdownAnsiStreamFormatter.Flush">
+            <summary>Flush trailing partial line (call at end of assistant turn).</summary>
+        </member>
+        <member name="M:DotnetClaw.UI.MarkdownAnsiStreamFormatter.SplitHoldBack(System.String)">
+            <summary>
+            Moves a short ambiguous suffix back to <paramref name="hold"/> so chunk boundaries
+            do not split markdown delimiters.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.UI.MarkdownAnsiStreamFormatter.UnclosedInlineHoldStart(System.String)">
+            <returns>Index of opening delimiter for an unclosed inline construct, or -1.</returns>
+        </member>
+        <member name="M:DotnetClaw.UI.MarkdownAnsiStreamFormatter.FormatInline(System.String,System.Boolean)">
+            <summary>Inline bold/italic/code for a single line (no newline).</summary>
+        </member>
         <member name="T:DotnetClaw.UI.IConsoleRenderer">
             <summary>
             Abstraction over the terminal output so the agent loop stays testable.
@@ -1280,6 +1304,27 @@
             Spectre.Console-powered rich terminal renderer.
             Inspired by OpenClaw's colour-coded tool-call display.
             </summary>
+        </member>
+        <member name="T:DotnetClaw.UI.TerminalAnsiRenderer">
+             <summary>
+             IConsoleRenderer implementation that emits VT100/ANSI escape sequences
+             for rendering in a web terminal emulator (xterm.js).
+            
+             All output is normalised to CRLF line endings because xterm.js in
+             non-convertEol mode requires explicit \r\n for newlines.
+             </summary>
+        </member>
+        <member name="M:DotnetClaw.UI.TerminalAnsiRenderer.#ctor(System.Action{System.String})">
+             <summary>
+             IConsoleRenderer implementation that emits VT100/ANSI escape sequences
+             for rendering in a web terminal emulator (xterm.js).
+            
+             All output is normalised to CRLF line endings because xterm.js in
+             non-convertEol mode requires explicit \r\n for newlines.
+             </summary>
+        </member>
+        <member name="M:DotnetClaw.UI.TerminalAnsiRenderer.Crlf(System.String)">
+            <summary>Normalize line endings to CRLF for xterm.js compatibility.</summary>
         </member>
         <member name="T:DotnetClaw.Workspace.WorkspaceDocument">
             <summary>

@@ -1,0 +1,174 @@
+@page "/skills"
+@rendermode InteractiveServer
+@inject IOptions<DotnetClawOptions> Options
+
+<PageTitle>Skills — DotnetClaw</PageTitle>
+
+<div class="p-6 space-y-6 animate-fade-in">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-xl font-semibold text-[hsl(213_31%_91%)]">Skills</h1>
+            <p class="text-sm text-[hsl(215.4_16.3%_50%)] mt-0.5">All available tools and plugins</p>
+        </div>
+        <Badge Variant="secondary">@AllSkills.Count skills</Badge>
+    </div>
+
+    <!-- Filter tabs -->
+    <div class="flex items-center gap-1 p-1 rounded-lg bg-[hsl(222.2_47.4%_8%)] border border-[hsl(216_34%_17%)] w-fit">
+        @foreach (var cat in Categories)
+        {
+            <button
+                type="button"
+                class="@(selectedCategory == cat ? "px-3 py-1.5 rounded-md text-xs font-medium bg-[hsl(220_100%_54%)] text-white" : "px-3 py-1.5 rounded-md text-xs font-medium text-[hsl(215.4_16.3%_50%)] hover:text-[hsl(213_31%_91%)] hover:bg-[hsl(216_34%_17%)]") transition-colors"
+                @onclick="() => selectedCategory = cat">
+                @cat
+            </button>
+        }
+    </div>
+
+    <!-- Skills grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        @foreach (var skill in FilteredSkills)
+        {
+            <SkillCard Skill="skill" />
+        }
+    </div>
+
+    <!-- MCP Servers section -->
+    <div class="space-y-3">
+        <div class="flex items-center gap-2">
+            <h2 class="text-sm font-semibold text-[hsl(213_31%_91%)]">MCP Servers</h2>
+            <Badge Variant="@(Options.Value.Mcp.EnabledServers.Any() ? "success" : "outline")">
+                @Options.Value.Mcp.EnabledServers.Count() enabled
+            </Badge>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+            @foreach (var server in Options.Value.Mcp.Servers)
+            {
+                <div class="rounded-lg border @(server.Enabled ? "border-[hsl(216_34%_17%)]" : "border-[hsl(216_34%_12%)] opacity-60") bg-[hsl(222.2_47.4%_6%)] p-4">
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="flex items-center gap-2.5">
+                            <div class="@(server.Enabled ? "w-7 h-7 rounded-md bg-[hsl(220_100%_54%/0.15)] text-[hsl(220_100%_63%)] flex items-center justify-center" : "w-7 h-7 rounded-md bg-[hsl(216_34%_14%)] text-[hsl(215.4_16.3%_35%)] flex items-center justify-center")">
+                                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M18 20V10M12 20V4M6 20v-6"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-[hsl(213_31%_91%)]">@server.Name</p>
+                                <p class="text-xs text-[hsl(215.4_16.3%_40%)]">@server.Transport</p>
+                            </div>
+                        </div>
+                        <Badge Variant="@(server.Enabled ? "success" : "outline")">
+                            @(server.Enabled ? "On" : "Off")
+                        </Badge>
+                    </div>
+                    <p class="text-xs text-[hsl(215.4_16.3%_40%)] mt-2.5 line-clamp-2">@server.Description</p>
+                    @if (!string.IsNullOrWhiteSpace(server.Command))
+                    {
+                        <code class="mt-2 block text-[10px] font-mono text-[hsl(215.4_16.3%_35%)] bg-[hsl(216_34%_10%)] rounded px-2 py-1 truncate">
+                            @server.Command @string.Join(" ", server.Arguments ?? [])
+                        </code>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Shell safety -->
+    <Card Title="Shell Safety" Description="Allowed and blocked shell command patterns">
+        <ChildContent>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="space-y-2">
+                    <div class="flex items-center gap-2 mb-2">
+                        <div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
+                        <span class="text-xs font-medium text-[hsl(213_31%_91%)]">Allowed Commands</span>
+                        @if (Options.Value.IsShellDevMode)
+                        {
+                            <Badge Variant="warning">Dev Mode — All Allowed</Badge>
+                        }
+                    </div>
+                    @if (Options.Value.IsShellDevMode)
+                    {
+                        <p class="text-xs text-amber-300">Developer mode active — no allow-list restrictions.</p>
+                    }
+                    else
+                    {
+                        <div class="flex flex-wrap gap-1.5">
+                            @foreach (var cmd in Options.Value.AllowedShellCommands)
+                            {
+                                <code class="text-xs font-mono bg-emerald-900/20 border border-emerald-800/40 text-emerald-300 px-2 py-0.5 rounded">@cmd</code>
+                            }
+                        </div>
+                    }
+                </div>
+                <div class="space-y-2">
+                    <div class="flex items-center gap-2 mb-2">
+                        <div class="w-1.5 h-1.5 rounded-full bg-red-400"></div>
+                        <span class="text-xs font-medium text-[hsl(213_31%_91%)]">Blocked Commands</span>
+                    </div>
+                    <div class="flex flex-wrap gap-1.5">
+                        @foreach (var cmd in Options.Value.BlockedShellCommands)
+                        {
+                            <code class="text-xs font-mono bg-red-900/20 border border-red-800/40 text-red-300 px-2 py-0.5 rounded">@cmd</code>
+                        }
+                    </div>
+                </div>
+            </div>
+        </ChildContent>
+    </Card>
+</div>
+
+@code {
+    private string selectedCategory = "All";
+
+    private static readonly string[] Categories = ["All", "Core", "Code", "Browser", "Comms", "MCP"];
+
+    private static readonly List<SkillDefinition> AllSkills =
+    [
+        new("Shell", "Core", "⚡", true,
+            "Execute shell commands with safety allow/block lists.",
+            ["run_command", "list_directory", "get_working_directory"]),
+
+        new("FileSystem", "Core", "📁", true,
+            "Read, write, append, delete and search files on disk.",
+            ["read_file", "write_file", "append_file", "delete_file", "file_exists", "find_files"]),
+
+        new("Workspace", "Core", "📂", true,
+            "Access and reload workspace identity documents (SOUL.md, AGENTS.md, etc.).",
+            ["list_workspace_docs", "get_workspace_doc", "reload_workspace", "get_workspace_context"]),
+
+        new("Dotnet", "Code", "🔷", true,
+            "Discover .NET projects, summarise C# files, and inspect NuGet packages.",
+            ["find_csharp_projects", "summarise_csharp_file", "get_nuget_packages"]),
+
+        new("Cursor", "Code", "🖱️", true,
+            "Drive the Cursor AI IDE in agent, plan, or ask mode.",
+            ["cursor_agent", "cursor_plan", "cursor_ask", "cursor_run"]),
+
+        new("Browser", "Browser", "🌐", true,
+            "Playwright-powered headless browser for navigation, screenshots, and form interaction.",
+            ["browser_navigate", "browser_screenshot", "browser_get_text", "browser_fill", "browser_click", "browser_submit_form", "browser_evaluate"]),
+
+        new("Telegram", "Comms", "📱", true,
+            "Send messages and notifications via the Telegram Bot API.",
+            ["send_telegram_message", "send_telegram_notification"]),
+
+        new("MCP", "MCP", "🔌", true,
+            "Model Context Protocol client — connect to any MCP server and call its tools.",
+            ["mcp_list_servers", "mcp_list_tools", "mcp_call_tool", "mcp_reconnect", "mcp_list_resources", "mcp_read_resource"]),
+    ];
+
+    private IEnumerable<SkillDefinition> FilteredSkills =>
+        selectedCategory == "All" ? AllSkills : AllSkills.Where(s => s.Category == selectedCategory);
+
+    public sealed record SkillDefinition(
+        string Name,
+        string Category,
+        string Icon,
+        bool Enabled,
+        string Description,
+        string[] Tools);
+}

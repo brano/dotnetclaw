@@ -1,0 +1,19 @@
+@* shadcn-inspired Badge component *@
+
+<span class="@BadgeClass">@ChildContent</span>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string Variant { get; set; } = "default"; // default | secondary | destructive | outline | success
+    [Parameter] public string? Class { get; set; }
+
+    private string BadgeClass => Variant switch
+    {
+        "secondary"   => $"inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-[hsl(222.2_47.4%_11.2%)] text-[hsl(210_40%_98%)] {Class}",
+        "destructive" => $"inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-red-900/40 text-red-300 border border-red-800 {Class}",
+        "outline"     => $"inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold border border-[hsl(216_34%_17%)] text-[hsl(215.4_16.3%_56.9%)] {Class}",
+        "success"     => $"inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-emerald-900/40 text-emerald-300 border border-emerald-800 {Class}",
+        "warning"     => $"inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-amber-900/40 text-amber-300 border border-amber-800 {Class}",
+        _             => $"inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-[hsl(220_100%_54%/0.15)] text-[hsl(220_100%_74%)] border border-[hsl(220_100%_54%/0.3)] {Class}",
+    };
+}

@@ -1,0 +1,38 @@
+@* shadcn-inspired Card component *@
+
+<div class="@CardClass">
+    @if (Title is not null || HeaderContent is not null)
+    {
+        <div class="flex flex-col space-y-1.5 p-6 pb-3">
+            @if (Title is not null)
+            {
+                <h3 class="text-sm font-semibold leading-none tracking-tight text-[hsl(213_31%_91%)]">@Title</h3>
+            }
+            @if (Description is not null)
+            {
+                <p class="text-xs text-[hsl(215.4_16.3%_56.9%)]">@Description</p>
+            }
+            @HeaderContent
+        </div>
+    }
+    @if (ChildContent is not null)
+    {
+        <div class="p-6 pt-0">@ChildContent</div>
+    }
+    @if (FooterContent is not null)
+    {
+        <div class="flex items-center p-6 pt-0">@FooterContent</div>
+    }
+</div>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public RenderFragment? HeaderContent { get; set; }
+    [Parameter] public RenderFragment? FooterContent { get; set; }
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public string? Description { get; set; }
+    [Parameter] public string? Class { get; set; }
+
+    private string CardClass =>
+        $"rounded-lg border border-[hsl(216_34%_17%)] bg-[hsl(222.2_47.4%_6%)] text-[hsl(213_31%_91%)] shadow-sm {Class}";
+}

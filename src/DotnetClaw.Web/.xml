@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>DotnetClaw.Web</name>
+    </assembly>
+    <members>
+        <member name="T:Program">
+            <summary>
+            Auto-generated public partial Program class for top-level statement apps.
+            </summary>
+        </member>
+        <member name="E:DotnetClaw.Web.Services.TerminalService.OnOutput">
+            <summary>
+            Fired for every ANSI chunk written to the terminal.
+            Terminal.razor instances subscribe and forward to xterm.js via JS interop.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Web.Services.TerminalService.GetBufferedOutput">
+            <summary>Returns the full rolling output buffer for replaying to new connections.</summary>
+        </member>
+        <member name="M:DotnetClaw.Web.Services.TerminalService.InitializeAsync(System.Threading.CancellationToken)">
+            <summary>
+            One-time initialisation: prints the banner, initialises the agent,
+            then emits the first prompt. Safe to call concurrently — only the
+            first caller wins; subsequent calls return immediately.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Web.Services.TerminalService.HandleInputAsync(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Process a single input line submitted by the user from xterm.js.
+            Handles meta-commands locally; routes everything else to the agent.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Web.Services.TerminalService.CancelCurrent">
+            <summary>Cancel the currently executing command (triggered by Ctrl+C).</summary>
+        </member>
+        <member name="M:DotnetClaw.Web.Components.Pages.Terminal.HandleInputLine(System.String)">
+            <summary>Called by xterm.js when the user presses Enter.</summary>
+        </member>
+        <member name="M:DotnetClaw.Web.Components.Pages.Terminal.CancelInput">
+            <summary>Called by xterm.js when the user presses Ctrl+C.</summary>
+        </member>
+    </members>
+</doc>

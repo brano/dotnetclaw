@@ -27,6 +27,7 @@ public interface IConsoleRenderer
 public sealed class SpectreConsoleRenderer : IConsoleRenderer
 {
     private bool _inAssistantTurn;
+    private readonly MarkdownAnsiStreamFormatter _markdown = new();
 
     public void WriteBanner()
     {
@@ -39,7 +40,7 @@ public sealed class SpectreConsoleRenderer : IConsoleRenderer
         AnsiConsole.Markup("[orangered1]  🦀[/]");
         AnsiConsole.MarkupLine("[bold blueviolet]  DotnetClaw - Personal AI Assistant in .NET — powered by Microsoft Semantic Kernel[/]");
         AnsiConsole.Markup("[orangered1]  🦞[/]");
-        AnsiConsole.MarkupLine("[grey]  OpenClaw-inspired agentic loop with Skills, custom Agents and Telegram bot channel[/]");
+        AnsiConsole.MarkupLine("[grey]  OpenClaw inspired agentic loop with Skills, custom Agents and Telegram bot channel[/]");
         AnsiConsole.WriteLine();
         AnsiConsole.MarkupLine("[grey]  Type [white]help[/] for commands, [white]exit[/] to quit, [white]reset[/] to clear context.[/]");
         AnsiConsole.Write(new Rule().RuleStyle("grey"));
@@ -49,19 +50,24 @@ public sealed class SpectreConsoleRenderer : IConsoleRenderer
     public void BeginAssistantTurn()
     {
         _inAssistantTurn = true;
-        AnsiConsole.Markup("[bold blueviolet]🦀 DotnetClaw:[/] ");
+        _markdown.Reset();
+        AnsiConsole.Markup("[bold blueviolet]🦀 DotnetClaw>[/] ");
     }
 
     public void WriteChunk(string text)
     {
-        // Stream tokens directly to stdout without markup interpretation
-        Console.Write(text);
+        var formatted = _markdown.Append(text);
+        if (formatted.Length > 0)
+            Console.Write(formatted);
     }
 
     public void EndAssistantTurn()
     {
         if (_inAssistantTurn)
         {
+            var tail = _markdown.Flush();
+            if (tail.Length > 0)
+                Console.Write(tail);
             Console.WriteLine();
             AnsiConsole.WriteLine();
         }
