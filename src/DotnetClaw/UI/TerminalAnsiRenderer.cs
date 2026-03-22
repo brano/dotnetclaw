@@ -11,6 +11,8 @@ namespace DotnetClaw.UI;
 /// </summary>
 public sealed class TerminalAnsiRenderer(Action<string> onOutput) : IConsoleRenderer
 {
+    private readonly MarkdownAnsiStreamFormatter _markdown = new();
+
     // ── ANSI escape sequences ──────────────────────────────────────────────────
     private const string Reset        = "\x1b[0m";
     private const string Bold         = "\x1b[1m";
@@ -42,8 +44,10 @@ public sealed class TerminalAnsiRenderer(Action<string> onOutput) : IConsoleRend
         Write(" ██████╔╝╚██████╔╝   ██║   ██║ ╚████║███████╗   ██║   ╚██████╗███████╗██║  ██║╚███╔███╔╝\r\n");
         Write($" ╚═════╝  ╚═════╝    ╚═╝   ╚═╝  ╚═══╝╚══════╝   ╚═╝    ╚═════╝╚══════╝╚═╝  ╚═╝ ╚══╝╚══╝{Reset}\r\n");
         Write("\r\n");
-        Write($" {BoldMagenta}🦀 DotnetClaw{Reset}  {Grey}Personal AI Assistant in .NET — powered by Microsoft Semantic Kernel{Reset}\r\n");
-        Write($" {Grey}🦞 OpenClaw-inspired agentic loop · Skills · Agents · Telegram bot channel{Reset}\r\n");
+        Write($" {BoldMagenta}🦀  DotnetClaw{Reset}  {Grey}Personal AI Assistant in .NET — powered by Microsoft Semantic Kernel{Reset}\r\n");
+        //Write($" {Grey}Agentic loop · Skills · Agents · Telegram bot channel{Reset}\r\n");
+        Write($" {Grey}Developed by Brano Lukac and Claude Sonnet{Reset}\r\n");
+        Write($" {Grey}Inspired by Peter Steinberger`s 🦞  OpenClaw (Clawdbot / Moltbot){Reset}\r\n");        
         Write("\r\n");
         Write($" {Grey}Type {BrightWhite}help{Reset}{Grey} for commands · {BrightWhite}reset{Reset}{Grey} to clear context · {BrightWhite}clear{Reset}{Grey} for fresh screen{Reset}\r\n");
         Write($" {Grey}──────────────────────────────────────────────────────────────────────────{Reset}\r\n");
@@ -51,13 +55,25 @@ public sealed class TerminalAnsiRenderer(Action<string> onOutput) : IConsoleRend
     }
 
     public void BeginAssistantTurn()
-        => Write($"\r\n{BoldMagenta}🦀 DotnetClaw:{Reset} ");
+    {
+        _markdown.Reset();
+        Write($"\r\n{BoldMagenta}🦀  DotnetClaw>{Reset} ");
+    }
 
     public void WriteChunk(string text)
-        => Write(Crlf(text));
+    {
+        var formatted = _markdown.Append(text);
+        if (formatted.Length > 0)
+            Write(formatted);
+    }
 
     public void EndAssistantTurn()
-        => Write("\r\n");
+    {
+        var tail = _markdown.Flush();
+        if (tail.Length > 0)
+            Write(tail);
+        Write("\r\n");
+    }
 
     public void WriteWarning(string message)
         => Write($"\r\n{Yellow}⚠  {Crlf(message)}{Reset}\r\n");

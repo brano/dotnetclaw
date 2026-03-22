@@ -198,7 +198,7 @@ public sealed class TerminalService : IDisposable
     }
 
     private void EmitPrompt()
-        => Emit("\r\n\x1b[1m\x1b[97myou>\x1b[0m ");
+        => Emit("\r\n\x1b[1m\x1b[97mYou>\x1b[0m ");
 
     private void EmitHelp()
     {
@@ -240,7 +240,7 @@ public sealed class TerminalService : IDisposable
         foreach (var msg in entries)
         {
             var role = msg.Role == AuthorRole.User
-                ? "\x1b[1m\x1b[97myou\x1b[0m          "
+                ? "\x1b[1m\x1b[97mYou\x1b[0m          "
                 : "\x1b[1m\x1b[35mDotnetClaw\x1b[0m  ";
 
             var content = (msg.Content ?? string.Empty).Replace("\r\n", " ").Replace("\n", " ");
