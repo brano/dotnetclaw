@@ -1270,6 +1270,30 @@
                  so two messages from the same chat never interleave agent calls
              </summary>
         </member>
+        <member name="T:DotnetClaw.UI.MarkdownAnsiStreamFormatter">
+            <summary>
+            Incrementally converts a practical subset of Markdown to ANSI SGR sequences
+            for terminals (xterm.js and modern Windows / Unix consoles).
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.UI.MarkdownAnsiStreamFormatter.Append(System.String)">
+            <summary>Append a streamed chunk from the model; returns text to write to the terminal (uses CRLF).</summary>
+        </member>
+        <member name="M:DotnetClaw.UI.MarkdownAnsiStreamFormatter.Flush">
+            <summary>Flush trailing partial line (call at end of assistant turn).</summary>
+        </member>
+        <member name="M:DotnetClaw.UI.MarkdownAnsiStreamFormatter.SplitHoldBack(System.String)">
+            <summary>
+            Moves a short ambiguous suffix back to <paramref name="hold"/> so chunk boundaries
+            do not split markdown delimiters.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.UI.MarkdownAnsiStreamFormatter.UnclosedInlineHoldStart(System.String)">
+            <returns>Index of opening delimiter for an unclosed inline construct, or -1.</returns>
+        </member>
+        <member name="M:DotnetClaw.UI.MarkdownAnsiStreamFormatter.FormatInline(System.String,System.Boolean)">
+            <summary>Inline bold/italic/code for a single line (no newline).</summary>
+        </member>
         <member name="T:DotnetClaw.UI.IConsoleRenderer">
             <summary>
             Abstraction over the terminal output so the agent loop stays testable.
