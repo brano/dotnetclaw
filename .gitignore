@@ -59,3 +59,7 @@ appsettings.Local.json
 .DS_Store
 Thumbs.db
 desktop.ini
+/src/DotnetClawHub/dotnetclawhub.db
+/src/DotnetClawHub/dotnetclawhub.db-shm
+/src/DotnetClawHub/dotnetclawhub.db-wal
+/src/DotnetClaw.Web/Properties/launchSettings.json

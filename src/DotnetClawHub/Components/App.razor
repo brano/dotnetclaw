@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
+    <title>DotnetClawHub</title>
+
+    <!-- Inter + JetBrains Mono fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+    <!-- Tailwind CSS Play CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'Consolas', 'monospace'],
+                    },
+                    colors: {
+                        background: 'hsl(224 71% 4%)',
+                        foreground: 'hsl(213 31% 91%)',
+                        card: {
+                            DEFAULT: 'hsl(224 71% 4%)',
+                            foreground: 'hsl(213 31% 91%)',
+                        },
+                        primary: {
+                            DEFAULT: 'hsl(210 40% 98%)',
+                            foreground: 'hsl(222.2 47.4% 1.2%)',
+                        },
+                        secondary: {
+                            DEFAULT: 'hsl(222.2 47.4% 11.2%)',
+                            foreground: 'hsl(210 40% 98%)',
+                        },
+                        muted: {
+                            DEFAULT: 'hsl(223 47% 11%)',
+                            foreground: 'hsl(215.4 16.3% 56.9%)',
+                        },
+                        accent: {
+                            DEFAULT: 'hsl(216 34% 17%)',
+                            foreground: 'hsl(210 40% 98%)',
+                        },
+                        destructive: {
+                            DEFAULT: 'hsl(0 63% 31%)',
+                            foreground: 'hsl(210 40% 98%)',
+                        },
+                        border: 'hsl(216 34% 17%)',
+                        input: 'hsl(216 34% 17%)',
+                        ring: 'hsl(216 34% 17%)',
+                        claw: {
+                            50:  'hsl(220 100% 97%)',
+                            100: 'hsl(220 100% 93%)',
+                            200: 'hsl(220 100% 85%)',
+                            300: 'hsl(220 100% 74%)',
+                            400: 'hsl(220 100% 63%)',
+                            500: 'hsl(220 100% 54%)',
+                            600: 'hsl(220 100% 46%)',
+                            700: 'hsl(220 100% 38%)',
+                            800: 'hsl(220 100% 28%)',
+                            900: 'hsl(220 100% 18%)',
+                        },
+                    },
+                    borderRadius: {
+                        lg: '0.5rem',
+                        md: '0.375rem',
+                        sm: '0.25rem',
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.3s ease-in-out',
+                        'slide-in': 'slideIn 0.3s ease-out',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        slideIn: {
+                            '0%': { transform: 'translateX(-10px)', opacity: '0' },
+                            '100%': { transform: 'translateX(0)', opacity: '1' },
+                        },
+                    },
+                },
+            },
+        }
+    </script>
+
+    <link rel="stylesheet" href="@Assets["app.css"]" />
+    <ImportMap />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <HeadOutlet />
+</head>
+
+<body class="bg-[hsl(224_71%_4%)] text-[hsl(213_31%_91%)] font-sans antialiased">
+    <Routes />
+    <script src="@Assets["_framework/blazor.web.js"]"></script>
+</body>
+
+</html>

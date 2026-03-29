@@ -1,0 +1,249 @@
+@page "/publish"
+@rendermode InteractiveServer
+@inject AppDbContext Db
+@inject NavigationManager Nav
+
+<PageTitle>Publish Skill — DotnetClawHub</PageTitle>
+
+<div class="max-w-2xl mx-auto px-6 py-10">
+    <h1 class="text-xl font-semibold text-[hsl(213_31%_91%)] mb-1">Publish a Skill</h1>
+    <p class="text-sm text-[hsl(215.4_16.3%_50%)] mb-6">
+        Share a SKILL.md with the DotnetClaw community. Existing skills will be updated if the name matches.
+    </p>
+
+    @if (_success)
+    {
+        <div class="flex items-center gap-3 p-4 rounded-lg border border-emerald-700/50 bg-emerald-900/20 mb-6 animate-fade-in">
+            <svg class="w-5 h-5 text-emerald-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                <polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+            <div>
+                <p class="text-sm font-medium text-emerald-300">Skill published!</p>
+                <p class="text-xs text-emerald-400/70 mt-0.5">
+                    <a href="/skills/@_publishedName" class="underline hover:text-emerald-300">View @_publishedName</a>
+                    &nbsp;or&nbsp;
+                    <button @onclick="ResetForm" class="underline hover:text-emerald-300">publish another</button>
+                </p>
+            </div>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(_error))
+    {
+        <div class="flex items-center gap-3 p-4 rounded-lg border border-red-700/50 bg-red-900/20 mb-6">
+            <svg class="w-5 h-5 text-red-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <p class="text-sm text-red-300">@_error</p>
+        </div>
+    }
+
+    <div class="space-y-4">
+        <!-- Name (slug) -->
+        <div>
+            <label class="block text-xs font-medium text-[hsl(215.4_16.3%_65%)] mb-1.5">
+                Name <span class="text-red-400">*</span>
+                <span class="text-[hsl(215.4_16.3%_35%)] font-normal ml-1">(URL-safe slug, e.g. "dotnet-expert")</span>
+            </label>
+            <input @bind="_form.Name" placeholder="my-skill"
+                   class="w-full bg-[hsl(216_34%_10%)] border border-[hsl(216_34%_17%)] rounded-md
+                          px-3 py-2 text-sm text-[hsl(213_31%_91%)] placeholder:text-[hsl(215.4_16.3%_30%)]
+                          focus:outline-none focus:ring-1 focus:ring-[hsl(220_100%_54%)]" />
+        </div>
+
+        <!-- Display name -->
+        <div>
+            <label class="block text-xs font-medium text-[hsl(215.4_16.3%_65%)] mb-1.5">
+                Display Name
+                <span class="text-[hsl(215.4_16.3%_35%)] font-normal ml-1">(human-readable title)</span>
+            </label>
+            <input @bind="_form.DisplayName" placeholder=".NET Expert"
+                   class="w-full bg-[hsl(216_34%_10%)] border border-[hsl(216_34%_17%)] rounded-md
+                          px-3 py-2 text-sm text-[hsl(213_31%_91%)] placeholder:text-[hsl(215.4_16.3%_30%)]
+                          focus:outline-none focus:ring-1 focus:ring-[hsl(220_100%_54%)]" />
+        </div>
+
+        <!-- Description -->
+        <div>
+            <label class="block text-xs font-medium text-[hsl(215.4_16.3%_65%)] mb-1.5">Description</label>
+            <input @bind="_form.Description" placeholder="Specialist in .NET 9/10 and ASP.NET Core"
+                   class="w-full bg-[hsl(216_34%_10%)] border border-[hsl(216_34%_17%)] rounded-md
+                          px-3 py-2 text-sm text-[hsl(213_31%_91%)] placeholder:text-[hsl(215.4_16.3%_30%)]
+                          focus:outline-none focus:ring-1 focus:ring-[hsl(220_100%_54%)]" />
+        </div>
+
+        <!-- Author + Version -->
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs font-medium text-[hsl(215.4_16.3%_65%)] mb-1.5">Author</label>
+                <input @bind="_form.Author" placeholder="your-handle"
+                       class="w-full bg-[hsl(216_34%_10%)] border border-[hsl(216_34%_17%)] rounded-md
+                              px-3 py-2 text-sm text-[hsl(213_31%_91%)] placeholder:text-[hsl(215.4_16.3%_30%)]
+                              focus:outline-none focus:ring-1 focus:ring-[hsl(220_100%_54%)]" />
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-[hsl(215.4_16.3%_65%)] mb-1.5">Version</label>
+                <input @bind="_form.Version" placeholder="1.0.0"
+                       class="w-full bg-[hsl(216_34%_10%)] border border-[hsl(216_34%_17%)] rounded-md
+                              px-3 py-2 text-sm text-[hsl(213_31%_91%)] placeholder:text-[hsl(215.4_16.3%_30%)]
+                              focus:outline-none focus:ring-1 focus:ring-[hsl(220_100%_54%)]" />
+            </div>
+        </div>
+
+        <!-- Tags -->
+        <div>
+            <label class="block text-xs font-medium text-[hsl(215.4_16.3%_65%)] mb-1.5">
+                Tags
+                <span class="text-[hsl(215.4_16.3%_35%)] font-normal ml-1">(comma-separated)</span>
+            </label>
+            <input @bind="_form.Tags" placeholder="dotnet, csharp, expert"
+                   class="w-full bg-[hsl(216_34%_10%)] border border-[hsl(216_34%_17%)] rounded-md
+                          px-3 py-2 text-sm text-[hsl(213_31%_91%)] placeholder:text-[hsl(215.4_16.3%_30%)]
+                          focus:outline-none focus:ring-1 focus:ring-[hsl(220_100%_54%)]" />
+        </div>
+
+        <!-- SKILL.md content -->
+        <div>
+            <label class="block text-xs font-medium text-[hsl(215.4_16.3%_65%)] mb-1.5">
+                SKILL.md content <span class="text-red-400">*</span>
+            </label>
+            <textarea @bind="_form.SkillMarkdown" rows="16" placeholder="---&#10;name: my-skill&#10;version: &quot;1.0&quot;&#10;description: &quot;What this skill does&quot;&#10;triggers: [keyword1, keyword2]&#10;---&#10;&#10;# My Skill&#10;&#10;Your skill instructions here..."
+                      class="w-full bg-[hsl(216_34%_10%)] border border-[hsl(216_34%_17%)] rounded-md
+                             px-3 py-2 text-sm text-[hsl(213_31%_91%)] placeholder:text-[hsl(215.4_16.3%_30%)]
+                             font-mono focus:outline-none focus:ring-1 focus:ring-[hsl(220_100%_54%)]
+                             resize-y min-h-40">
+            </textarea>
+        </div>
+
+        <!-- Submit -->
+        <div class="flex items-center gap-3 pt-2">
+            <button @onclick="HandleSubmit" disabled="@_submitting"
+                    class="px-5 py-2 rounded-md bg-[hsl(220_100%_54%)] hover:bg-[hsl(220_100%_46%)]
+                           disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium
+                           transition-colors">
+                @if (_submitting)
+                {
+                    <span>Publishing...</span>
+                }
+                else
+                {
+                    <span>Publish Skill</span>
+                }
+            </button>
+            <a href="/browse" class="text-sm text-[hsl(215.4_16.3%_50%)] hover:text-[hsl(213_31%_91%)] transition-colors">
+                Cancel
+            </a>
+        </div>
+    </div>
+
+    <!-- API hint -->
+    <div class="mt-8 p-4 rounded-lg border border-[hsl(216_34%_17%)] bg-[hsl(222.2_47.4%_4%)]">
+        <p class="text-xs font-semibold text-[hsl(215.4_16.3%_40%)] uppercase tracking-widest mb-2">Via API</p>
+        <pre class="text-xs font-mono text-[hsl(220_100%_74%)] overflow-x-auto whitespace-pre-wrap">curl -X POST /api/skills \
+  -H "Content-Type: application/json" \
+  -d '{"name":"my-skill","displayName":"My Skill",
+       "description":"...","author":"me",
+       "version":"1.0.0","tags":"tag1,tag2",
+       "skillMarkdown":"---\nname: my-skill\n---\n..."}'</pre>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "name")]
+    public string? PrefillName { get; set; }
+
+    private PublishForm _form = new();
+    private bool _submitting;
+    private bool _success;
+    private string _error = "";
+    private string _publishedName = "";
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrWhiteSpace(PrefillName) && string.IsNullOrWhiteSpace(_form.Name))
+            _form.Name = PrefillName;
+    }
+
+    private async Task HandleSubmit()
+    {
+        _error = "";
+
+        if (string.IsNullOrWhiteSpace(_form.Name))
+        {
+            _error = "Name is required.";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(_form.SkillMarkdown))
+        {
+            _error = "SKILL.md content is required.";
+            return;
+        }
+
+        // Sanitize slug
+        var name = _form.Name.Trim().ToLowerInvariant()
+            .Replace(' ', '-')
+            .Replace('_', '-');
+
+        _submitting = true;
+        try
+        {
+            var existing = await Db.Skills.FirstOrDefaultAsync(s => s.Name == name);
+            if (existing is not null)
+            {
+                existing.DisplayName = string.IsNullOrWhiteSpace(_form.DisplayName) ? name : _form.DisplayName.Trim();
+                existing.Description = _form.Description.Trim();
+                existing.Author = _form.Author.Trim();
+                existing.Version = string.IsNullOrWhiteSpace(_form.Version) ? "1.0.0" : _form.Version.Trim();
+                existing.Tags = _form.Tags.Trim();
+                existing.SkillMarkdown = _form.SkillMarkdown;
+                existing.UpdatedAt = DateTime.UtcNow;
+            }
+            else
+            {
+                Db.Skills.Add(new Skill
+                {
+                    Name = name,
+                    DisplayName = string.IsNullOrWhiteSpace(_form.DisplayName) ? name : _form.DisplayName.Trim(),
+                    Description = _form.Description.Trim(),
+                    Author = _form.Author.Trim(),
+                    Version = string.IsNullOrWhiteSpace(_form.Version) ? "1.0.0" : _form.Version.Trim(),
+                    Tags = _form.Tags.Trim(),
+                    SkillMarkdown = _form.SkillMarkdown,
+                });
+            }
+
+            await Db.SaveChangesAsync();
+            _publishedName = name;
+            _success = true;
+        }
+        catch (Exception ex)
+        {
+            _error = $"Failed to publish: {ex.Message}";
+        }
+        finally
+        {
+            _submitting = false;
+        }
+    }
+
+    private void ResetForm()
+    {
+        _form = new();
+        _success = false;
+        _error = "";
+        _publishedName = "";
+    }
+
+    private sealed class PublishForm
+    {
+        public string Name { get; set; } = "";
+        public string DisplayName { get; set; } = "";
+        public string Description { get; set; } = "";
+        public string Author { get; set; } = "";
+        public string Version { get; set; } = "1.0.0";
+        public string Tags { get; set; } = "";
+        public string SkillMarkdown { get; set; } = "";
+    }
+}
