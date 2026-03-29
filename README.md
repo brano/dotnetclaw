@@ -1,10 +1,69 @@
+<p align="center">
+    <img width="748" height="163" alt="image" src="https://github.com/user-attachments/assets/d20230dc-ff45-4ad1-81b8-17153eed0922" />
+</p>
+<p align="center">
+    <img width="300" height="300" alt="logo" src="https://github.com/user-attachments/assets/b4ea5571-3ff9-409a-8781-7335777c9acb" />
+</p>
+
 # 🦀 DotnetClaw
 
-> 🦞 OpenClaw-inspired Personal AI Assistant built on **.NET 10** and **Microsoft Semantic Kernel**'s Agent Framework.
+![.NET 10](https://img.shields.io/badge/.NET-10-blueviolet)
+![License: MIT](https://img.shields.io/badge/License-MIT-green)
+![Semantic Kernel](https://img.shields.io/badge/Semantic%20Kernel-✓-blue)
 
-<img width="1105" height="245" alt="image" src="https://github.com/user-attachments/assets/281b4dd4-bfff-49af-a4dc-4393ea122215" />
+🦀 DotnetClaw is a personal AI assistant developed in .NET framework — Semantic Kernel agents, Telegram Bot channel, Agent Skills, MCP client, Playwright browser, Cursor agent CLI integration
 
----
+## What is DotnetClaw?
+
+DotnetClaw is a self-hosted AI coding assistant that runs on your machine.
+It combines **Microsoft Semantic Kernel**, **MCP (Model Context Protocol)**,
+a **Telegram bot**, and a **Playwright browser** into a single .NET 10 CLI agent
+that can read/write files, run shell commands, browse the web, and control your coding 
+agent like Cursor or Claude Code — all from natural language.
+
+**Supports:** OpenAI · Azure OpenAI · Anthropic Claude
+
+## Inspiration
+
+DotnetClaw is inspired by 🦞 [OpenClaw](https://github.com/openclaw/openclaw) (formerly Clawdbot / Moltbot)
+by [Peter Steinberger](https://twitter.com/steipete) — a personal AI assistant concept
+that proved how powerful a well-wired agent loop can be. This is a .NET reimagining of that idea.
+
+## Projects
+
+### DotnetClaw CLI
+- Slash commands (/status /ask /plan /agent /cursor /claude)
+- Chat and control your DotnetClaw agent from terminal
+- Show chat history
+- Install agent skills from DotnetClawHub (hub)
+<img width="1113" height="320" alt="image" src="https://github.com/user-attachments/assets/75618df0-dacf-4146-bfa3-c440d9c78858" />
+
+_DotnetClaw CLI running in Windows Powershell Terminal_
+
+<img width="1106" height="323" alt="image" src="https://github.com/user-attachments/assets/dd9ac88d-03de-4cdf-bed1-4eaa6f8fe7dc" />
+
+_DotnetClaw CLI running in Ubuntu bash terminal (via WSL)_
+
+### DotnetClaw Web UI 
+- Onboarding
+- Dashboard
+- Chat
+- Skills
+- Terminal UI
+- Telegram channel configuration
+
+<img width="1852" height="778" alt="Screenshot 2026-03-26 143759" src="https://github.com/user-attachments/assets/48686145-1936-466e-bb2c-cbffe6764d15" />
+
+_Web UI for DotnetClaw Developed in Blazor_
+
+### DotnetClawHub - Hub for Agent Skills
+- Browse skills
+- Install skill
+- Publish new skill
+  
+<img width="1346" height="538" alt="Screenshot 2026-03-26 143824" src="https://github.com/user-attachments/assets/b2f2ae00-75bb-42be-8a71-00430b658243" />
+
+_Agent Skills Hub for DotnetClaw inspired by ClawHub developed in Blazor_
 
 ### Prerequisites
 - [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
