@@ -36,11 +36,12 @@ that proved how powerful a well-wired agent loop can be. This is a .NET reimagin
 - Chat and control your DotnetClaw agent from terminal
 - Show chat history
 - Install agent skills from DotnetClawHub (hub)
-<img width="1113" height="320" alt="image" src="https://github.com/user-attachments/assets/75618df0-dacf-4146-bfa3-c440d9c78858" />
+
+<img width="1109" height="332" alt="image" src="https://github.com/user-attachments/assets/8b5f45f2-4111-45d7-bd99-45b9549e778d" />
 
 _DotnetClaw CLI running in Windows Powershell Terminal_
 
-<img width="1106" height="323" alt="image" src="https://github.com/user-attachments/assets/dd9ac88d-03de-4cdf-bed1-4eaa6f8fe7dc" />
+<img width="1110" height="334" alt="image" src="https://github.com/user-attachments/assets/fc9b4205-2761-4735-b80b-5ea62def1827" />
 
 _DotnetClaw CLI running in Ubuntu bash terminal (via WSL)_
 
