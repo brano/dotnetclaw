@@ -59,5 +59,11 @@ appsettings.Local.json
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Claude Code
 /.claude/settings.local.json
 /.claude/worktrees/**
+
+# Development launch settings
+/src/DotnetClaw.Web/Properties/launchSettings.json
+/src/DotnetClawHub/Properties/launchSettings.json
