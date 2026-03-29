@@ -1,0 +1,40 @@
+/* DotnetClawHub — custom CSS (Tailwind handles most styling) */
+
+/* Smooth scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: hsl(224 71% 4%); }
+::-webkit-scrollbar-thumb { background: hsl(216 34% 20%); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: hsl(216 34% 28%); }
+
+/* Blazor reconnect modal */
+#components-reconnect-modal { display: none; }
+
+/* Sidebar active link (not used in hub but kept for compatibility) */
+.nav-link-active {
+    background: hsl(220 100% 54% / 0.15);
+    border-left: 2px solid hsl(220 100% 54%);
+    color: hsl(220 100% 74%);
+}
+
+/* Tag badges */
+.tag-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.15rem 0.55rem;
+    border-radius: 9999px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    background: hsl(338deg 80% 52% / 0.12);
+    color: hsl(338deg 80% 68%);
+    border: 1px solid hsl(338deg 95% 58% / 0.25);
+}
+
+/* SKILL.md viewer — raw pre block */
+.skill-md pre {
+    font-family: 'JetBrains Mono', Consolas, monospace;
+    font-size: 0.75rem;
+    line-height: 1.65;
+    color: hsl(213 31% 82%);
+    white-space: pre;
+    tab-size: 2;
+}

@@ -8,6 +8,7 @@
   <Folder Name="/src/" Description="Application source code">
     <Project Path="src/DotnetClaw.Web/DotnetClaw.Web.csproj" />
     <Project Path="src/DotnetClaw/DotnetClaw.csproj" />
+    <Project Path="src/DotnetClawHub/DotnetClawHub.csproj" />
   </Folder>
 
   <!-- ── Test Projects ───────────────────────────────────────────────────── -->

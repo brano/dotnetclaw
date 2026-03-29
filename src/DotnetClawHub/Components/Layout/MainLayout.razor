@@ -1,0 +1,59 @@
+@inherits LayoutComponentBase
+
+<div class="min-h-screen bg-[hsl(224_71%_4%)] text-[hsl(213_31%_91%)]">
+
+    <!-- Top Navigation -->
+    <header class="sticky top-0 z-50 border-b border-[hsl(216_34%_12%)] bg-[hsl(224_71%_3%/95%)] backdrop-blur-sm">
+        <div class="max-w-7xl mx-auto px-6 flex items-center gap-6 h-14">
+            <!-- Logo -->
+            <a href="/" class="flex items-center gap-2.5 shrink-0">
+                <img src="logo.png" alt="DotnetClaw" class="w-12 h-12 object-contain" />
+				<span class="text-sm font-bold text-[hsl(338.27_80.33%_52.16%)] tracking-tight">DotnetClawHub</span>
+            </a>
+
+            <!-- Nav links -->
+            <nav class="flex items-center gap-1">
+                <NavLink href="/browse" class="nav-top-item" ActiveClass="nav-top-active">Skills</NavLink>
+                <a href="/api/skills" target="_blank" class="nav-top-item">API</a>
+            </nav>
+
+            <!-- Spacer -->
+            <div class="flex-1"></div>
+
+            <!-- CTA -->
+            <a href="/publish"
+               class="px-3.5 py-1.5 rounded-md text-xs font-semibold bg-[hsl(338deg_80%_52%)] hover:bg-[hsl(338deg_80%_58%)]
+                      text-white transition-colors shadow-sm">
+                Publish Skill
+            </a>
+        </div>
+    </header>
+
+    <!-- Page content -->
+    <main>
+        @Body
+    </main>
+
+</div>
+
+<style>
+    .nav-top-item {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.375rem 0.625rem;
+        border-radius: 0.375rem;
+        font-size: 0.8125rem;
+        font-weight: 500;
+        color: hsl(215.4 16.3% 56.9%);
+        text-decoration: none;
+        transition: background-color 0.15s, color 0.15s;
+    }
+    .nav-top-item:hover {
+        background-color: hsl(216 34% 14%);
+        color: hsl(213 31% 91%);
+    }
+    .nav-top-active {
+        color: hsl(213 31% 91%);
+        background-color: hsl(216 34% 14%);
+    }
+</style>
