@@ -1,6 +1,7 @@
 using DotnetClaw.Agents;
 using DotnetClaw.Browser;
 using DotnetClaw.Config;
+using DotnetClaw.Hub;
 using DotnetClaw.Mcp;
 using DotnetClaw.Plugins;
 using DotnetClaw.Telegram;
@@ -42,6 +43,10 @@ services
         configuration.GetSection($"{DotnetClawOptions.SectionName}:Browser"))
     .Configure<McpOptions>(
         configuration.GetSection($"{DotnetClawOptions.SectionName}:{McpOptions.SectionName}"))
+    .Configure<HubOptions>(
+        configuration.GetSection($"{DotnetClawOptions.SectionName}:{HubOptions.SectionName}"))
+    .AddHttpClient<HubClient>()
+        .Services
     .AddSingleton<IConsoleRenderer, SpectreConsoleRenderer>()
     // Workspace
     .AddSingleton<WorkspaceLoader>()
@@ -95,6 +100,8 @@ foreach (var svc in hostedServices)
 var renderer  = provider.GetRequiredService<IConsoleRenderer>();
 var agentLoop = provider.GetRequiredService<ClawAgentLoop>();
 var workspace = provider.GetRequiredService<WorkspaceLoader>();
+var hubClient = provider.GetRequiredService<HubClient>();
+var coreOpts  = provider.GetRequiredService<IOptions<DotnetClawOptions>>().Value;
 var telegramOpts = provider.GetRequiredService<IOptions<TelegramOptions>>().Value;
 
 renderer.WriteBanner();
@@ -177,6 +184,14 @@ while (!cts.IsCancellationRequested)
             continue;
     }
 
+    // ── Hub commands (hub, hub search, hub install, hub list) ─────────────
+    if (input.Trim().Equals("hub", StringComparison.OrdinalIgnoreCase) ||
+        input.Trim().StartsWith("hub ", StringComparison.OrdinalIgnoreCase))
+    {
+        await HandleHubCommandAsync(input.Trim(), hubClient, workspace, coreOpts, renderer, cts.Token);
+        continue;
+    }
+
     try
     {
         await agentLoop.RunTurnAsync(input, cts.Token);
@@ -215,6 +230,14 @@ static void PrintHelp(IConsoleRenderer r)
           ws reload         Force reload workspace documents from disk
           exit              Quit DotnetClaw
 
+        DotnetClawHub Commands
+        ──────────────────────
+          hub               Show hub help
+          hub search        List all skills available on the hub
+          hub search <q>    Search hub skills by keyword
+          hub install <n>   Install (or update) a skill from the hub
+          hub list          List skills installed in your workspace
+
         Available Skills
         ────────────────
           Shell      → run_command, list_directory, get_working_directory
@@ -238,6 +261,7 @@ static void PrintHelp(IConsoleRenderer r)
           Mcp_{name} → auto-imported tools from each connected MCP server
 
         Telegram Bot Commands (from Telegram)
+
         ──────────────────────────────────────
           /ask <question>    Ask DotnetClaw anything
           /plan <prompt>     Cursor plan mode (no edits)
@@ -256,4 +280,111 @@ static void PrintHelp(IConsoleRenderer r)
           AZURE_OPENAI_API_KEY  Required for azure provider
           TELEGRAM_BOT_TOKEN    Telegram bot token (overrides appsettings)
         """);
+}
+
+static async Task HandleHubCommandAsync(
+    string input,
+    DotnetClaw.Hub.HubClient hub,
+    WorkspaceLoader workspace,
+    DotnetClawOptions opts,
+    IConsoleRenderer renderer,
+    CancellationToken ct)
+{
+    if (!hub.IsEnabled)
+    {
+        renderer.WriteError("Hub is disabled. Set DotnetClaw:Hub:Enabled=true in appsettings.json.");
+        return;
+    }
+
+    // Tokenise: ["hub", ...args]
+    var parts = input.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+    var sub   = parts.Length > 1 ? parts[1].ToLowerInvariant() : string.Empty;
+
+    switch (sub)
+    {
+        case "":
+        case "help":
+            renderer.WriteWarning("""
+                DotnetClawHub Commands
+                ──────────────────────
+                  hub search            List all skills available on the hub
+                  hub search <query>    Search hub skills by keyword
+                  hub install <name>    Install (or update) a skill from the hub
+                  hub list              List skills installed in your workspace
+                """);
+            break;
+
+        case "search":
+        {
+            var query = parts.Length > 2 ? string.Join(' ', parts[2..]) : null;
+            try
+            {
+                var skills = await hub.SearchAsync(query, ct);
+                if (skills.Count == 0)
+                {
+                    renderer.WriteWarning(string.IsNullOrWhiteSpace(query)
+                        ? "No skills found on the hub."
+                        : $"No skills matching '{query}'.");
+                    break;
+                }
+
+                renderer.WriteWarning($"Found {skills.Count} skill(s) on hub:");
+                foreach (var s in skills)
+                    Console.WriteLine($"  {s.Name,-30} {s.Description}  [{s.Downloads} installs]");
+            }
+            catch (Exception ex)
+            {
+                renderer.WriteError($"Hub search failed: {ex.Message}");
+            }
+            break;
+        }
+
+        case "install":
+        {
+            if (parts.Length < 3)
+            {
+                renderer.WriteError("Usage: hub install <skill-name>");
+                break;
+            }
+            var name = parts[2];
+            renderer.WriteWarning($"Installing skill '{name}' from hub…");
+            try
+            {
+                var result = await hub.InstallAsync(name, opts.ResolvedWorkspacePath, ct);
+                if (result.Success)
+                {
+                    renderer.WriteWarning($"✓ Skill '{name}' installed to: {result.FilePath}");
+                    await workspace.ReloadAsync(ct);
+                    renderer.WriteWarning("Workspace reloaded — skill is now active.");
+                }
+                else
+                {
+                    renderer.WriteError($"✖ Install failed: {result.Error}");
+                }
+            }
+            catch (Exception ex)
+            {
+                renderer.WriteError($"Hub install failed: {ex.Message}");
+            }
+            break;
+        }
+
+        case "list":
+        {
+            var ws = await workspace.LoadAsync(ct);
+            if (ws.Skills.Count == 0)
+            {
+                renderer.WriteWarning("No skills installed in workspace.");
+                break;
+            }
+            renderer.WriteWarning($"{ws.Skills.Count} installed skill(s):");
+            foreach (var s in ws.Skills)
+                Console.WriteLine($"  {s.SkillName}");
+            break;
+        }
+
+        default:
+            renderer.WriteError($"Unknown hub command '{sub}'. Type 'hub help' for usage.");
+            break;
+    }
 }

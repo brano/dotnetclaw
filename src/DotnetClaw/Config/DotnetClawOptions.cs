@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using DotnetClaw.Hub;
 
 namespace DotnetClaw.Config;
 
@@ -204,6 +205,12 @@ public sealed class DotnetClawOptions
     /// Bound from <c>DotnetClaw:Mcp</c>.
     /// </summary>
     public McpOptions Mcp { get; set; } = new();
+
+    /// <summary>
+    /// Settings for the DotnetClawHub skills registry client.
+    /// Bound from <c>DotnetClaw:Hub</c>.
+    /// </summary>
+    public HubOptions Hub { get; set; } = new();
 
     // =========================================================================
     // Computed / derived helpers

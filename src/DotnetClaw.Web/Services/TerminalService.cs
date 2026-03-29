@@ -1,6 +1,10 @@
 using System.Text;
 using DotnetClaw.Agents;
+using DotnetClaw.Config;
+using DotnetClaw.Hub;
 using DotnetClaw.UI;
+using DotnetClaw.Workspace;
+using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel.ChatCompletion;
 
 namespace DotnetClaw.Web.Services;
@@ -29,6 +33,9 @@ public sealed class TerminalService : IDisposable
     // ── Dependencies ───────────────────────────────────────────────────────────
     private readonly ClawAgentLoop _agentLoop;
     private readonly AppState _appState;
+    private readonly HubClient _hub;
+    private readonly WorkspaceLoader _workspace;
+    private readonly DotnetClawOptions _coreOpts;
     private readonly ILogger<TerminalService> _logger;
 
     // ── State ──────────────────────────────────────────────────────────────────
@@ -43,10 +50,16 @@ public sealed class TerminalService : IDisposable
     public TerminalService(
         ClawAgentLoop agentLoop,
         AppState appState,
+        HubClient hub,
+        WorkspaceLoader workspace,
+        IOptions<DotnetClawOptions> coreOpts,
         ILogger<TerminalService> logger)
     {
         _agentLoop = agentLoop;
         _appState  = appState;
+        _hub       = hub;
+        _workspace = workspace;
+        _coreOpts  = coreOpts.Value;
         _logger    = logger;
     }
 
@@ -145,6 +158,15 @@ public sealed class TerminalService : IDisposable
                     return;
             }
 
+            // ── Hub commands ───────────────────────────────────────────────────
+            if (trimmed.Equals("hub", StringComparison.OrdinalIgnoreCase) ||
+                trimmed.StartsWith("hub ", StringComparison.OrdinalIgnoreCase))
+            {
+                await HandleHubCommandAsync(trimmed, _currentCts.Token);
+                EmitPrompt();
+                return;
+            }
+
             // ── Route to agent ─────────────────────────────────────────────────
             _appState.SetAgentRunning(true, "Processing…");
             try
@@ -203,12 +225,19 @@ public sealed class TerminalService : IDisposable
     private void EmitHelp()
     {
         Emit("\r\n\x1b[1m\x1b[34mAvailable commands\x1b[0m\r\n\r\n");
-        Emit("  \x1b[33mhelp\x1b[0m        Show this help\r\n");
-        Emit("  \x1b[33mreset\x1b[0m       Reset conversation history and reload workspace\r\n");
-        Emit("  \x1b[33mhistory\x1b[0m     Show conversation history summary\r\n");
-        Emit("  \x1b[33mworkspace\x1b[0m   Show current workspace / agent context info\r\n");
-        Emit("  \x1b[33mclear\x1b[0m       Clear the terminal screen\r\n");
-        Emit("  \x1b[33mexit\x1b[0m        Close terminal (close the browser tab)\r\n");
+        Emit("  \x1b[33mhelp\x1b[0m                   Show this help\r\n");
+        Emit("  \x1b[33mreset\x1b[0m                  Reset conversation history and reload workspace\r\n");
+        Emit("  \x1b[33mhistory\x1b[0m                Show conversation history summary\r\n");
+        Emit("  \x1b[33mworkspace\x1b[0m              Show current workspace / agent context info\r\n");
+        Emit("  \x1b[33mclear\x1b[0m                  Clear the terminal screen\r\n");
+        Emit("  \x1b[33mexit\x1b[0m                   Close terminal (close the browser tab)\r\n");
+        Emit("\r\n");
+        Emit("  \x1b[1m\x1b[34mDotnetClawHub commands\x1b[0m\r\n\r\n");
+        Emit("  \x1b[33mhub\x1b[0m                    Show hub help\r\n");
+        Emit("  \x1b[33mhub search\x1b[0m             List all skills available on the hub\r\n");
+        Emit("  \x1b[33mhub search <query>\x1b[0m     Search hub skills by keyword\r\n");
+        Emit("  \x1b[33mhub install <name>\x1b[0m     Install (or update) a skill from the hub\r\n");
+        Emit("  \x1b[33mhub list\x1b[0m               List skills installed in your workspace\r\n");
         Emit("\r\n");
         Emit("  \x1b[90mAny other text is forwarded to the DotnetClaw AI agent.\x1b[0m\r\n");
         Emit("\r\n");
@@ -249,6 +278,116 @@ public sealed class TerminalService : IDisposable
             Emit($"  {role} {content}\r\n");
         }
         Emit("\r\n");
+    }
+
+    private async Task HandleHubCommandAsync(string input, CancellationToken ct)
+    {
+        if (!_hub.IsEnabled)
+        {
+            Emit("\r\n\x1b[1;31m✖ Hub is disabled.\x1b[0m Set DotnetClaw:Hub:Enabled=true in appsettings.json.\r\n");
+            return;
+        }
+
+        var parts = input.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var sub   = parts.Length > 1 ? parts[1].ToLowerInvariant() : string.Empty;
+
+        switch (sub)
+        {
+            case "":
+            case "help":
+                Emit("\r\n\x1b[1m\x1b[34mDotnetClawHub commands\x1b[0m\r\n\r\n");
+                Emit("  \x1b[33mhub search\x1b[0m             List all skills available on the hub\r\n");
+                Emit("  \x1b[33mhub search <query>\x1b[0m     Search hub skills by keyword\r\n");
+                Emit("  \x1b[33mhub install <name>\x1b[0m     Install (or update) a skill from the hub\r\n");
+                Emit("  \x1b[33mhub list\x1b[0m               List skills installed in your workspace\r\n");
+                Emit("\r\n");
+                break;
+
+            case "search":
+            {
+                var query = parts.Length > 2 ? string.Join(' ', parts[2..]) : null;
+                Emit(string.IsNullOrWhiteSpace(query)
+                    ? "\r\n\x1b[90mFetching skills from hub…\x1b[0m\r\n"
+                    : $"\r\n\x1b[90mSearching hub for '{query}'…\x1b[0m\r\n");
+                try
+                {
+                    var skills = await _hub.SearchAsync(query, ct);
+                    if (skills.Count == 0)
+                    {
+                        Emit(string.IsNullOrWhiteSpace(query)
+                            ? "\x1b[33mNo skills found on the hub.\x1b[0m\r\n"
+                            : $"\x1b[33mNo skills matching '{query}'.\x1b[0m\r\n");
+                        break;
+                    }
+
+                    Emit($"\x1b[32m{skills.Count} skill(s) found:\x1b[0m\r\n\r\n");
+                    foreach (var s in skills)
+                    {
+                        Emit($"  \x1b[1m\x1b[97m{s.Name}\x1b[0m");
+                        if (!string.IsNullOrWhiteSpace(s.Description))
+                            Emit($"  \x1b[90m{s.Description}\x1b[0m");
+                        Emit($"  \x1b[90m[{s.Downloads} installs]\x1b[0m\r\n");
+                    }
+                    Emit("\r\n");
+                }
+                catch (Exception ex)
+                {
+                    Emit($"\r\n\x1b[1;31m✖ Hub search failed:\x1b[0m \x1b[31m{ex.Message}\x1b[0m\r\n");
+                }
+                break;
+            }
+
+            case "install":
+            {
+                if (parts.Length < 3)
+                {
+                    Emit("\r\n\x1b[33mUsage: hub install <skill-name>\x1b[0m\r\n");
+                    break;
+                }
+                var name = parts[2];
+                Emit($"\r\n\x1b[90mInstalling skill '\x1b[97m{name}\x1b[90m' from hub…\x1b[0m\r\n");
+                try
+                {
+                    var result = await _hub.InstallAsync(name, _coreOpts.ResolvedWorkspacePath, ct);
+                    if (result.Success)
+                    {
+                        Emit($"\x1b[32m✓ Skill '{name}' installed.\x1b[0m\r\n");
+                        Emit($"\x1b[90m  → {result.FilePath}\x1b[0m\r\n");
+                        Emit("\x1b[90mReloading workspace…\x1b[0m\r\n");
+                        await _workspace.ReloadAsync(ct);
+                        Emit("\x1b[32m✓ Workspace reloaded — skill is now active.\x1b[0m\r\n");
+                    }
+                    else
+                    {
+                        Emit($"\r\n\x1b[1;31m✖ Install failed:\x1b[0m \x1b[31m{result.Error}\x1b[0m\r\n");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Emit($"\r\n\x1b[1;31m✖ Hub install failed:\x1b[0m \x1b[31m{ex.Message}\x1b[0m\r\n");
+                }
+                break;
+            }
+
+            case "list":
+            {
+                var ws = await _workspace.LoadAsync(ct);
+                if (ws.Skills.Count == 0)
+                {
+                    Emit("\r\n\x1b[33mNo skills installed in workspace.\x1b[0m\r\n");
+                    break;
+                }
+                Emit($"\r\n\x1b[32m{ws.Skills.Count} installed skill(s):\x1b[0m\r\n\r\n");
+                foreach (var s in ws.Skills)
+                    Emit($"  \x1b[97m{s.SkillName}\x1b[0m\r\n");
+                Emit("\r\n");
+                break;
+            }
+
+            default:
+                Emit($"\r\n\x1b[33mUnknown hub command '{sub}'. Type 'hub help' for usage.\x1b[0m\r\n");
+                break;
+        }
     }
 
     public void Dispose()
