@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>DotnetClawHub</name>
+    </assembly>
+    <members>
+        <member name="P:DotnetClawHub.Models.Skill.Name">
+            <summary>URL-safe slug, unique identifier (e.g. "dotnet-expert")</summary>
+        </member>
+        <member name="P:DotnetClawHub.Models.Skill.Tags">
+            <summary>Comma-separated tags (e.g. "dotnet,csharp,expert")</summary>
+        </member>
+        <member name="P:DotnetClawHub.Models.Skill.SkillMarkdown">
+            <summary>Full SKILL.md content</summary>
+        </member>
+        <member name="T:Program">
+            <summary>
+            Auto-generated public partial Program class for top-level statement apps.
+            </summary>
+        </member>
+    </members>
+</doc>

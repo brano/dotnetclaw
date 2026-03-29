@@ -1,0 +1,190 @@
+@page "/browse"
+@inject AppDbContext Db
+
+<PageTitle>Skills — DotnetClawHub</PageTitle>
+
+<div class="max-w-7xl mx-auto px-6 py-10">
+
+    <!-- Header -->
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-[hsl(213_31%_91%)]">
+            Skills
+            @if (_totalCount > 0)
+            {
+                <span class="text-[hsl(215.4_16.3%_40%)] font-normal text-xl ml-1">(@_totalCount)</span>
+            }
+        </h1>
+        <p class="text-sm text-[hsl(215.4_16.3%_50%)] mt-1">Browse the skill library.</p>
+    </div>
+
+    <!-- Search + filters -->
+    <div class="rounded-xl border border-[hsl(216_34%_15%)] bg-[hsl(222.2_47.4%_4%)] p-4 mb-6">
+        <form method="get" action="/browse">
+            <div class="relative">
+                <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[hsl(215.4_16.3%_35%)]"
+                     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                </svg>
+                <input name="q" type="text" value="@Query"
+                       placeholder="Filter by name, slug, or summary..."
+                       class="w-full bg-[hsl(216_34%_9%)] border border-[hsl(216_34%_15%)] rounded-lg
+                              pl-10 pr-4 py-2.5 text-sm text-[hsl(213_31%_91%)]
+                              placeholder:text-[hsl(215.4_16.3%_30%)]
+                              focus:outline-none focus:ring-1 focus:ring-[hsl(220_100%_54%/0.6)]" />
+            </div>
+
+            <div class="flex items-center gap-2 mt-3">
+                <button type="submit" class="filter-btn @(string.IsNullOrWhiteSpace(Query) ? "filter-btn-active" : "")">
+                    All skills
+                </button>
+                @if (!string.IsNullOrWhiteSpace(Query))
+                {
+                    <a href="/browse" class="filter-btn">Clear filter</a>
+                }
+                <div class="flex-1"></div>
+                <span class="text-xs text-[hsl(215.4_16.3%_35%)]">@_skills.Count result@(_skills.Count == 1 ? "" : "s")</span>
+            </div>
+        </form>
+    </div>
+
+    <!-- Skills table -->
+    @if (_skills.Count == 0)
+    {
+        <div class="flex flex-col items-center justify-center py-24 text-center">
+            <span class="text-4xl mb-4">🔍</span>
+            <h2 class="text-base font-semibold text-[hsl(213_31%_91%)] mb-2">No skills found</h2>
+            <p class="text-sm text-[hsl(215.4_16.3%_50%)]">
+                @if (!string.IsNullOrWhiteSpace(Query))
+                {
+                    <text>Try a different search, or </text>
+                    <a href="/publish" class="text-[hsl(338deg_80%_62%)] hover:underline">publish this skill</a>
+                    <text>.</text>
+                }
+                else
+                {
+                    <a href="/publish" class="text-[hsl(338deg_80%_62%)] hover:underline">Be the first to publish a skill!</a>
+                }
+            </p>
+        </div>
+    }
+    else
+    {
+        <div class="rounded-xl border border-[hsl(216_34%_15%)] overflow-hidden">
+            <!-- Table header -->
+            <div class="grid grid-cols-[2fr_3fr_1fr_1fr] gap-4 px-5 py-2.5
+                        bg-[hsl(222.2_47.4%_4%)] border-b border-[hsl(216_34%_13%)]">
+                <span class="text-[10px] font-semibold uppercase tracking-widest text-[hsl(215.4_16.3%_35%)]">Skill</span>
+                <span class="text-[10px] font-semibold uppercase tracking-widest text-[hsl(215.4_16.3%_35%)]">Summary</span>
+                <span class="text-[10px] font-semibold uppercase tracking-widest text-[hsl(215.4_16.3%_35%)]">Author</span>
+                <span class="text-[10px] font-semibold uppercase tracking-widest text-[hsl(215.4_16.3%_35%)] text-right">Stats</span>
+            </div>
+
+            <!-- Rows -->
+            @foreach (var skill in _skills)
+            {
+                <a href="/skills/@skill.Name"
+                   class="grid grid-cols-[2fr_3fr_1fr_1fr] gap-4 items-center px-5 py-4
+                          border-b border-[hsl(216_34%_11%)] last:border-b-0
+                          bg-[hsl(222.2_47.4%_3%)] hover:bg-[hsl(222.2_47.4%_5%)] transition-colors group">
+
+                    <!-- Skill name + version -->
+                    <div>
+                        <div class="text-sm font-semibold text-[hsl(213_31%_91%)] group-hover:text-[hsl(220_100%_74%)] transition-colors">
+                            @skill.DisplayName
+                        </div>
+                        <div class="text-xs text-[hsl(215.4_16.3%_38%)] mt-0.5 font-mono">ver. @skill.Version</div>
+                    </div>
+
+                    <!-- Summary -->
+                    <p class="text-sm text-[hsl(215.4_16.3%_50%)] line-clamp-2 leading-relaxed">
+                        @(string.IsNullOrWhiteSpace(skill.Description) ? skill.Name : skill.Description)
+                    </p>
+
+                    <!-- Author -->
+                    <div class="flex items-center gap-1.5 min-w-0">
+                        <div class="w-5 h-5 rounded-full bg-[hsl(220_100%_54%/0.2)] border border-[hsl(220_100%_54%/0.3)]
+                                    flex items-center justify-center shrink-0">
+                            <span class="text-[9px] font-bold text-[hsl(220_100%_63%)]">
+                                @(skill.Author.Length > 0 ? char.ToUpperInvariant(skill.Author[0]).ToString() : "?")
+                            </span>
+                        </div>
+                        <span class="text-xs text-[hsl(215.4_16.3%_50%)] truncate">@@@skill.Author</span>
+                    </div>
+
+                    <!-- Stats: downloads + tags count -->
+                    <div class="flex items-center justify-end gap-3 text-xs text-[hsl(215.4_16.3%_40%)]">
+                        <span class="flex items-center gap-1">
+                            <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+                            </svg>
+                            @FormatNumber(skill.Downloads)
+                        </span>
+                        <span class="text-[hsl(215.4_16.3%_25%)]">@skill.TagList.Length v</span>
+                    </div>
+                </a>
+            }
+        </div>
+    }
+</div>
+
+<style>
+    .filter-btn {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.3rem 0.875rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: hsl(215.4 16.3% 55%);
+        border: 1px solid hsl(216 34% 17%);
+        background: transparent;
+        cursor: pointer;
+        text-decoration: none;
+        transition: all 0.15s;
+    }
+    .filter-btn:hover, .filter-btn-active {
+        background: hsl(216 34% 17%);
+        color: hsl(213 31% 91%);
+        border-color: hsl(216 34% 25%);
+    }
+</style>
+
+@code {
+    [SupplyParameterFromQuery(Name = "q")]
+    public string? Query { get; set; }
+
+    private List<Skill> _skills = [];
+    private int _totalCount;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var query = Db.Skills.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(Query))
+        {
+            var q = Query;
+            query = query.Where(s =>
+                EF.Functions.Like(s.Name, $"%{q}%") ||
+                EF.Functions.Like(s.Description, $"%{q}%") ||
+                EF.Functions.Like(s.Tags, $"%{q}%") ||
+                EF.Functions.Like(s.Author, $"%{q}%"));
+        }
+
+        _skills = await query
+            .OrderByDescending(s => s.Downloads)
+            .ThenBy(s => s.Name)
+            .ToListAsync();
+
+        _totalCount = string.IsNullOrWhiteSpace(Query)
+            ? await Db.Skills.CountAsync()
+            : _skills.Count;
+    }
+
+    private static string FormatNumber(int n) => n switch
+    {
+        >= 1_000_000 => $"{n / 1_000_000.0:0.#}M",
+        >= 1_000 => $"{n / 1_000.0:0.#}k",
+        _ => n.ToString()
+    };
+}
