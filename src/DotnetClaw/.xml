@@ -494,6 +494,12 @@
             Bound from <c>DotnetClaw:Mcp</c>.
             </summary>
         </member>
+        <member name="P:DotnetClaw.Config.DotnetClawOptions.Hub">
+            <summary>
+            Settings for the DotnetClawHub skills registry client.
+            Bound from <c>DotnetClaw:Hub</c>.
+            </summary>
+        </member>
         <member name="M:DotnetClaw.Config.DotnetClawOptions.ToStartupSummary">
             <summary>
             Returns a short human-readable summary of the active configuration,
@@ -965,6 +971,48 @@
             Runtime workspace skill.
             Lets the agent inspect, reload, and query identity documents mid-conversation.
             </summary>
+        </member>
+        <member name="M:DotnetClaw.Hub.HubClient.SearchAsync(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Search for skills on the hub. Pass null or empty string to list all.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Hub.HubClient.DownloadAsync(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Download the raw SKILL.md markdown for a named skill.
+            Returns null when the skill is not found (404).
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Hub.HubClient.InstallAsync(System.String,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Download a skill from the hub and save it to
+            <c>{workspacePath}/skills/{name}/SKILL.md</c>.
+            Overwrites an existing skill of the same name.
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.Hub.HubInstallResult">
+            <summary>Result of a <see cref="M:DotnetClaw.Hub.HubClient.InstallAsync(System.String,System.String,System.Threading.CancellationToken)"/> call.</summary>
+        </member>
+        <member name="M:DotnetClaw.Hub.HubInstallResult.#ctor(System.Boolean,System.String,System.String,System.String)">
+            <summary>Result of a <see cref="M:DotnetClaw.Hub.HubClient.InstallAsync(System.String,System.String,System.Threading.CancellationToken)"/> call.</summary>
+        </member>
+        <member name="T:DotnetClaw.Hub.HubOptions">
+            <summary>
+            Configuration for the DotnetClawHub skills registry client.
+            Bound from <c>DotnetClaw:Hub</c> in appsettings.json.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Hub.HubOptions.Url">
+            <summary>Base URL of the DotnetClawHub instance.</summary>
+        </member>
+        <member name="P:DotnetClaw.Hub.HubOptions.Enabled">
+            <summary>When false, hub commands are disabled.</summary>
+        </member>
+        <member name="T:DotnetClaw.Hub.HubSkillInfo">
+            <summary>Skill metadata returned by the DotnetClawHub search API.</summary>
+        </member>
+        <member name="M:DotnetClaw.Hub.HubSkillInfo.#ctor(System.Int32,System.String,System.String,System.String,System.String,System.String,System.String,System.Int32,System.DateTime,System.DateTime)">
+            <summary>Skill metadata returned by the DotnetClawHub search API.</summary>
         </member>
         <member name="T:DotnetClaw.Mcp.IMcpClient">
             <summary>

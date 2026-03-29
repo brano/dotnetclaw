@@ -1,6 +1,7 @@
 using DotnetClaw.Agents;
 using DotnetClaw.Browser;
 using DotnetClaw.Config;
+using DotnetClaw.Hub;
 using DotnetClaw.Mcp;
 using DotnetClaw.Plugins;
 using DotnetClaw.Telegram;
@@ -19,8 +20,14 @@ var builder = WebApplication.CreateBuilder(args);
 // ── Configuration ─────────────────────────────────────────────────────────────
 builder.Configuration
     .SetBasePath(AppContext.BaseDirectory)
-    .AddJsonFile("appsettings.json", optional: false)
-    .AddEnvironmentVariables();
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+
+if (builder.Environment.IsDevelopment())
+{
+    builder.Configuration.AddJsonFile("appsettings.Development.json", optional: true, reloadOnChange: true);
+}
+
+builder.Configuration.AddEnvironmentVariables();
 
 // ── Blazor ────────────────────────────────────────────────────────────────────
 builder.Services.AddRazorComponents()
@@ -43,10 +50,14 @@ builder.Services
     .Configure<BrowserOptions>(
         builder.Configuration.GetSection($"{DotnetClawOptions.SectionName}:Browser"))
     .Configure<McpOptions>(
-        builder.Configuration.GetSection($"{DotnetClawOptions.SectionName}:{McpOptions.SectionName}"));
+        builder.Configuration.GetSection($"{DotnetClawOptions.SectionName}:{McpOptions.SectionName}"))
+    .Configure<HubOptions>(
+        builder.Configuration.GetSection($"{DotnetClawOptions.SectionName}:{HubOptions.SectionName}"));
 
 // ── DotnetClaw Core Services ──────────────────────────────────────────────────
 builder.Services
+    .AddHttpClient<HubClient>()
+        .Services
     .AddSingleton<IConsoleRenderer, SpectreConsoleRenderer>()
     // Workspace
     .AddSingleton<WorkspaceLoader>()
