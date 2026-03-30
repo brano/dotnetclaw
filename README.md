@@ -37,13 +37,11 @@ that proved how powerful a well-wired agent loop can be. This is a .NET reimagin
 - Show chat history
 - Install agent skills from DotnetClawHub (hub)
 
+> DotnetClaw CLI running in Windows Powershell Terminal:
 <img width="1109" height="332" alt="image" src="https://github.com/user-attachments/assets/8b5f45f2-4111-45d7-bd99-45b9549e778d" />
 
-_DotnetClaw CLI running in Windows Powershell Terminal_
-
+> DotnetClaw CLI running in Ubuntu bash terminal (via WSL): 
 <img width="1110" height="334" alt="image" src="https://github.com/user-attachments/assets/fc9b4205-2761-4735-b80b-5ea62def1827" />
-
-_DotnetClaw CLI running in Ubuntu bash terminal (via WSL)_
 
 ### DotnetClaw Web UI 
 - Onboarding
@@ -53,18 +51,23 @@ _DotnetClaw CLI running in Ubuntu bash terminal (via WSL)_
 - Terminal UI
 - Telegram channel configuration
 
+> Web UI for DotnetClaw developed in Blazor:
 <img width="1852" height="778" alt="Screenshot 2026-03-26 143759" src="https://github.com/user-attachments/assets/48686145-1936-466e-bb2c-cbffe6764d15" />
 
-_Web UI for DotnetClaw Developed in Blazor_
-
 ### DotnetClawHub - Hub for Agent Skills
-- Browse skills
-- Install skill
-- Publish new skill
-  
-<img width="1346" height="538" alt="Screenshot 2026-03-26 143824" src="https://github.com/user-attachments/assets/b2f2ae00-75bb-42be-8a71-00430b658243" />
+- Create & Publish own custom (agent) skill
+- Browse agent skills
+- Install agent skill via API
+- SKILL.md support
 
-_Agent Skills Hub for DotnetClaw inspired by ClawHub developed in Blazor_
+> Agent Skills Hub for DotnetClaw inspired by ClawHub developed in Blazor:
+<img width="1288" height="521" alt="image" src="https://github.com/user-attachments/assets/2a76e17e-4efe-4d66-8b03-9de723588546" />
+
+> Browse & search for skills:
+<img width="1281" height="596" alt="image" src="https://github.com/user-attachments/assets/f804389f-7a83-4009-90ae-0b6490897069" />
+
+> Skill details & installation:
+<img width="1010" height="577" alt="image" src="https://github.com/user-attachments/assets/4f389f7c-3620-4912-8ce9-31f33fedc246" />
 
 ### Prerequisites
 - [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
