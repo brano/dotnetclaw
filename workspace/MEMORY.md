@@ -30,3 +30,15 @@ cd src/DotnetClaw && OPENAI_API_KEY=sk-... dotnet run
 <!-- Add session notes here -->
 
 - (empty)
+
+## Jokes
+
+<!-- Add session jokes here -->
+
+- (empty)
+
+## Information about my human
+
+<!-- Add information about my human here -->
+
+- (empty)
