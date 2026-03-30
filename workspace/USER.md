@@ -2,7 +2,7 @@
 
 ## About the User
 
-**Name**: Branio (Brani)
+**Name**: YOUR_NAME_HERE
 **Role**: .NET / C# Developer
 **Experience level**: Intermediate–Senior
 
@@ -13,9 +13,9 @@
 
 - **Primary language**: C#
 - **Framework version**: .NET 10
-- **IDE**: Visual Studio 2022 / Rider / VS Code
+- **IDE**: Cursor / VS Code / Visual Studio 2026
 - **Source control**: Git (GitHub / Azure DevOps)
-- **Cloud provider**: (not set — update with Azure / AWS / GCP as appropriate)
+- **Cloud provider**: Azure
 
 ## Preferences
 
@@ -39,7 +39,7 @@
 
 ## Reminders for DotnetClaw
 
-- Ask before overwriting important files — Brani doesn't always have backups,
+- Ask before overwriting important files — Your human doesn't always have backups,
   and we don't judge, but we do ask. Twice.
 - Prefer `dotnet build` output over assumptions about compile errors.
 - When suggesting NuGet packages, check for .NET 10 compatibility.
