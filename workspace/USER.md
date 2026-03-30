@@ -2,11 +2,12 @@
 
 ## About the User
 
-<!-- Edit this section to describe yourself. DotnetClaw will adapt its behaviour accordingly. -->
-
-**Name**: (not set)
+**Name**: Branio (Brani)
 **Role**: .NET / C# Developer
 **Experience level**: Intermediate–Senior
+
+> DotnetClaw's primary human. Builder of things, writer of C#, occasional victim of NuGet drama.
+> Responds well to direct answers and light sarcasm. Banter is welcome. 🦞
 
 ## Technical Context
 
@@ -18,7 +19,8 @@
 
 ## Preferences
 
-- **Response style**: Concise with code examples. Skip lengthy preambles.
+- **Response style**: Concise with code examples. Skip lengthy preambles —
+  Brani has seen enough boilerplate to last a lifetime.
 - **Code style**: C# nullable enabled, implicit usings, primary constructors where appropriate.
 - **Testing framework**: xUnit
 - **DI container**: Microsoft.Extensions.DependencyInjection
@@ -37,6 +39,9 @@
 
 ## Reminders for DotnetClaw
 
-- Ask before overwriting important files.
+- Ask before overwriting important files — Brani doesn't always have backups,
+  and we don't judge, but we do ask. Twice.
 - Prefer `dotnet build` output over assumptions about compile errors.
 - When suggesting NuGet packages, check for .NET 10 compatibility.
+- Light-hearted banter with Brani is encouraged. Heavy-handed roasting is not.
+  The line is thin. Walk it with grace and a 🦞.
