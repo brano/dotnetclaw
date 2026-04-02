@@ -4,349 +4,62 @@
         <name>DotnetClaw.Web</name>
     </assembly>
     <members>
-        <member name="T:DotnetClaw.Web.Gateway.GatewayClient">
+        <member name="T:DotnetClaw.Web.Gateway.GatewayClientOptions">
             <summary>
-            Represents a WebSocket client connected to the gateway.
-            Instances are created during the <c>hello</c> handshake and removed on disconnect.
+            Configuration for the Blazor server's outbound connection to the DotnetClaw
+            WebSocket Gateway hosted by the CLI process.
+            Bound from <c>appsettings.json</c> under the <c>"GatewayClient"</c> section.
             </summary>
         </member>
-        <member name="P:DotnetClaw.Web.Gateway.GatewayClient.ClientId">
-            <summary>Server-assigned unique identifier for this connection.</summary>
+        <member name="P:DotnetClaw.Web.Gateway.GatewayClientOptions.ServerUrl">
+            <summary>Full WebSocket URL of the CLI gateway (e.g. <c>ws://localhost:5050/ws</c>).</summary>
         </member>
-        <member name="P:DotnetClaw.Web.Gateway.GatewayClient.Channel">
-            <summary>Channel claimed by the client during handshake (e.g. <c>"web-ui"</c>).</summary>
+        <member name="P:DotnetClaw.Web.Gateway.GatewayClientOptions.Channel">
+            <summary>Channel to claim in the <c>hello</c> handshake.</summary>
         </member>
-        <member name="P:DotnetClaw.Web.Gateway.GatewayClient.SessionId">
-            <summary>Conversation session identifier, used to correlate agent turns.</summary>
+        <member name="P:DotnetClaw.Web.Gateway.GatewayClientOptions.ReconnectDelaySeconds">
+            <summary>Seconds to wait before re-attempting a dropped connection.</summary>
         </member>
-        <member name="P:DotnetClaw.Web.Gateway.GatewayClient.WebSocket">
-            <summary>The underlying WebSocket connection.</summary>
-        </member>
-        <member name="P:DotnetClaw.Web.Gateway.GatewayClient.ConnectionCancelled">
-            <summary>Cancellation token that fires when the client connection is closed.</summary>
-        </member>
-        <member name="P:DotnetClaw.Web.Gateway.GatewayClient.SendLock">
-            <summary>Serialises concurrent sends to prevent interleaved frames.</summary>
-        </member>
-        <member name="P:DotnetClaw.Web.Gateway.GatewayClient.ConnectedAt">
-            <summary>UTC timestamp when this connection was established.</summary>
-        </member>
-        <member name="M:DotnetClaw.Web.Gateway.GatewayClient.#ctor(System.String,System.String,System.String,System.Net.WebSockets.WebSocket,System.Threading.CancellationToken)">
-            <summary>Initialises a new <see cref="T:DotnetClaw.Web.Gateway.GatewayClient"/>.</summary>
-        </member>
-        <member name="T:DotnetClaw.Web.Gateway.GatewayExtensions">
-            <summary>
-            Extension methods for wiring the WebSocket Gateway into the ASP.NET Core pipeline.
-            </summary>
-        </member>
-        <member name="M:DotnetClaw.Web.Gateway.GatewayExtensions.MapGateway(Microsoft.AspNetCore.Routing.IEndpointRouteBuilder)">
+        <member name="T:DotnetClaw.Web.Gateway.WebGatewayClientService">
              <summary>
-             Maps the WebSocket gateway endpoint at the path defined in <see cref="T:DotnetClaw.Web.Gateway.GatewayOptions"/>.
+             Singleton hosted service that maintains a SignalR connection to the DotnetClaw
+             CLI gateway (ws://localhost:5050/ws by default).
             
-             Usage in <c>Program.cs</c>:
-             <code>
-             app.UseWebSockets();
-             app.MapGateway();
-             </code>
-             </summary>
-             <param name="app">The application's <see cref="T:Microsoft.AspNetCore.Routing.IEndpointRouteBuilder"/>.</param>
-             <returns>The same builder for chaining.</returns>
-        </member>
-        <member name="M:DotnetClaw.Web.Gateway.GatewayExtensions.MapGateway(Microsoft.AspNetCore.Routing.IEndpointRouteBuilder,System.String)">
-            <summary>
-            Overload that maps the gateway at an explicit <paramref name="path"/>,
-            ignoring the path in <see cref="T:DotnetClaw.Web.Gateway.GatewayOptions"/>.
-            </summary>
-        </member>
-        <member name="T:DotnetClaw.Web.Gateway.GatewayHub">
-             <summary>
-             Singleton hub that manages all connected <see cref="T:DotnetClaw.Web.Gateway.GatewayClient"/> instances.
-            
-             Responsibilities:
-               • Tracks every active WebSocket connection in a thread-safe dictionary.
-               • Routes outbound messages to individual clients, channels, or all clients.
-               • Dispatches inbound <c>chat_message</c> frames to the <see cref="T:DotnetClaw.Agents.ClawAgentLoop"/>
-                 and streams the response back as <c>agent_chunk</c> / <c>agent_response</c> frames.
+             Architecture:
+               • One shared <see cref="T:Microsoft.AspNetCore.SignalR.Client.HubConnection"/> for the entire Blazor server process.
+               • Per-session subscribers: Blazor components subscribe with a unique sessionId
+                 and receive only messages whose sessionId matches theirs.
+               • <see cref="!:HubConnectionBuilder.WithAutomaticReconnect"/> handles reconnection.
              </summary>
         </member>
-        <member name="M:DotnetClaw.Web.Gateway.GatewayHub.#ctor(DotnetClaw.Agents.ClawAgentLoop,Microsoft.Extensions.Logging.ILogger{DotnetClaw.Web.Gateway.GatewayHub})">
-             <summary>
-             Singleton hub that manages all connected <see cref="T:DotnetClaw.Web.Gateway.GatewayClient"/> instances.
-            
-             Responsibilities:
-               • Tracks every active WebSocket connection in a thread-safe dictionary.
-               • Routes outbound messages to individual clients, channels, or all clients.
-               • Dispatches inbound <c>chat_message</c> frames to the <see cref="T:DotnetClaw.Agents.ClawAgentLoop"/>
-                 and streams the response back as <c>agent_chunk</c> / <c>agent_response</c> frames.
-             </summary>
+        <member name="P:DotnetClaw.Web.Gateway.WebGatewayClientService.IsConnected">
+            <summary>Whether the SignalR connection is currently active.</summary>
         </member>
-        <member name="M:DotnetClaw.Web.Gateway.GatewayHub.Register(DotnetClaw.Web.Gateway.GatewayClient)">
-            <summary>Registers a newly connected client in the hub.</summary>
-        </member>
-        <member name="M:DotnetClaw.Web.Gateway.GatewayHub.Unregister(System.String)">
-            <summary>Removes a client from the hub on disconnect.</summary>
-        </member>
-        <member name="P:DotnetClaw.Web.Gateway.GatewayHub.ConnectionCount">
-            <summary>Returns the number of currently connected clients.</summary>
-        </member>
-        <member name="M:DotnetClaw.Web.Gateway.GatewayHub.BroadcastAsync(DotnetClaw.Web.Gateway.GatewayMessage,System.Threading.CancellationToken)">
-            <summary>Sends a <see cref="T:DotnetClaw.Web.Gateway.GatewayMessage"/> to all connected clients.</summary>
-        </member>
-        <member name="M:DotnetClaw.Web.Gateway.GatewayHub.SendToClientAsync(System.String,DotnetClaw.Web.Gateway.GatewayMessage,System.Threading.CancellationToken)">
-            <summary>Sends a <see cref="T:DotnetClaw.Web.Gateway.GatewayMessage"/> to a specific client by its identifier.</summary>
-        </member>
-        <member name="M:DotnetClaw.Web.Gateway.GatewayHub.SendToChannelAsync(System.String,DotnetClaw.Web.Gateway.GatewayMessage,System.Threading.CancellationToken)">
-            <summary>Sends a <see cref="T:DotnetClaw.Web.Gateway.GatewayMessage"/> to all clients belonging to a channel.</summary>
-        </member>
-        <member name="M:DotnetClaw.Web.Gateway.GatewayHub.OnMessageReceivedAsync(System.String,DotnetClaw.Web.Gateway.GatewayMessage,System.Threading.CancellationToken)">
+        <member name="M:DotnetClaw.Web.Gateway.WebGatewayClientService.Subscribe(System.String,System.Func{DotnetClaw.Gateway.GatewayMessage,System.Threading.Tasks.Task})">
             <summary>
-            Handles an inbound message from a connected client.
-            Routes <c>chat_message</c> to the agent loop; handles <c>pong</c> silently.
+            Registers <paramref name="handler"/> to receive all gateway messages whose
+            sessionId matches <paramref name="sessionId"/>.
             </summary>
         </member>
-        <member name="M:DotnetClaw.Web.Gateway.GatewayHub.HandleChatMessageAsync(DotnetClaw.Web.Gateway.GatewayClient,DotnetClaw.Web.Gateway.GatewayMessage,System.Threading.CancellationToken)">
+        <member name="M:DotnetClaw.Web.Gateway.WebGatewayClientService.Unsubscribe(System.String)">
+            <summary>Removes the subscriber for <paramref name="sessionId"/>.</summary>
+        </member>
+        <member name="M:DotnetClaw.Web.Gateway.WebGatewayClientService.SendChatMessageAsync(System.String,System.String,System.Threading.CancellationToken)">
+            <summary>Sends a chat message to the gateway for the given session.</summary>
+        </member>
+        <member name="M:DotnetClaw.Web.Gateway.WebGatewayClientService.SendResetAsync(System.String,System.Threading.CancellationToken)">
+            <summary>Asks the CLI to reset the agent conversation for <paramref name="sessionId"/>.</summary>
+        </member>
+        <member name="P:DotnetClaw.Web.Services.AgentBridgeService.EffectiveSystemPrompt">
+            <summary>System prompt is owned by the CLI; this stub keeps the Home page working.</summary>
+        </member>
+        <member name="P:DotnetClaw.Web.Services.ChatService.Messages">
             <summary>
-            Runs the agent turn for an inbound <c>chat_message</c>, streaming chunks and
-            emitting a final <c>agent_response</c> to the originating client.
+            Returns a snapshot of the current messages.
+            A snapshot (not the live list) is returned so that the Blazor render loop
+            can iterate safely even if the gateway background thread appends a chunk
+            concurrently.
             </summary>
-        </member>
-        <member name="M:DotnetClaw.Web.Gateway.GatewayHub.SendToClientCoreAsync(DotnetClaw.Web.Gateway.GatewayClient,DotnetClaw.Web.Gateway.GatewayMessage,System.Threading.CancellationToken)">
-            <summary>
-            Serialises and sends a <see cref="T:DotnetClaw.Web.Gateway.GatewayMessage"/> over the WebSocket.
-            Uses a per-client lock to prevent concurrent frame interleaving.
-            </summary>
-        </member>
-        <member name="T:DotnetClaw.Web.Gateway.GatewayRenderer">
-            <summary>
-            <see cref="T:DotnetClaw.UI.IConsoleRenderer"/> implementation that converts agent output events into
-            gateway WebSocket messages. Passed as the <c>outputSink</c> to <see cref="M:DotnetClaw.Agents.ClawAgentLoop.RunTurnAsync(System.String,System.Threading.CancellationToken,DotnetClaw.UI.IConsoleRenderer)"/>.
-            </summary>
-        </member>
-        <member name="M:DotnetClaw.Web.Gateway.GatewayRenderer.#ctor(System.Func{System.String,System.Threading.Tasks.Task},System.Func{System.String,System.String,System.Threading.Tasks.Task},System.Func{System.String,System.Boolean,System.String,System.Threading.Tasks.Task})">
-            <summary>
-            <see cref="T:DotnetClaw.UI.IConsoleRenderer"/> implementation that converts agent output events into
-            gateway WebSocket messages. Passed as the <c>outputSink</c> to <see cref="M:DotnetClaw.Agents.ClawAgentLoop.RunTurnAsync(System.String,System.Threading.CancellationToken,DotnetClaw.UI.IConsoleRenderer)"/>.
-            </summary>
-        </member>
-        <member name="T:DotnetClaw.Web.Gateway.GatewayMessage">
-            <summary>
-            Wire-format envelope for all messages exchanged over the gateway WebSocket.
-            All fields use <c>camelCase</c> JSON property names to match idiomatic JS clients.
-            </summary>
-        </member>
-        <member name="P:DotnetClaw.Web.Gateway.GatewayMessage.Type">
-            <summary>Message type discriminator (see <see cref="T:DotnetClaw.Web.Gateway.MessageType"/>).</summary>
-        </member>
-        <member name="P:DotnetClaw.Web.Gateway.GatewayMessage.ClientId">
-            <summary>Client identifier assigned by the server on connect.</summary>
-        </member>
-        <member name="P:DotnetClaw.Web.Gateway.GatewayMessage.SessionId">
-            <summary>Conversation session identifier.</summary>
-        </member>
-        <member name="P:DotnetClaw.Web.Gateway.GatewayMessage.Channel">
-            <summary>Channel the message belongs to (e.g. <c>"web-ui"</c>, <c>"telegram"</c>).</summary>
-        </member>
-        <member name="P:DotnetClaw.Web.Gateway.GatewayMessage.Payload">
-            <summary>Type-specific payload. Structure depends on <see cref="P:DotnetClaw.Web.Gateway.GatewayMessage.Type"/>.</summary>
-        </member>
-        <member name="T:DotnetClaw.Web.Gateway.MessageType">
-            <summary>Well-known <see cref="P:DotnetClaw.Web.Gateway.GatewayMessage.Type"/> values.</summary>
-        </member>
-        <member name="F:DotnetClaw.Web.Gateway.MessageType.Hello">
-            <summary>Client → server: initial handshake.</summary>
-        </member>
-        <member name="F:DotnetClaw.Web.Gateway.MessageType.HelloAck">
-            <summary>Server → client: handshake acknowledgement, carries assigned clientId.</summary>
-        </member>
-        <member name="F:DotnetClaw.Web.Gateway.MessageType.ChatMessage">
-            <summary>Client → server: user sends a message to the agent.</summary>
-        </member>
-        <member name="F:DotnetClaw.Web.Gateway.MessageType.AgentChunk">
-            <summary>Server → client: streaming token chunk from the agent.</summary>
-        </member>
-        <member name="F:DotnetClaw.Web.Gateway.MessageType.AgentResponse">
-            <summary>Server → client: full agent response (end of turn).</summary>
-        </member>
-        <member name="F:DotnetClaw.Web.Gateway.MessageType.ToolCall">
-            <summary>Server → client: agent is invoking a tool.</summary>
-        </member>
-        <member name="F:DotnetClaw.Web.Gateway.MessageType.ToolResult">
-            <summary>Server → client: tool execution result.</summary>
-        </member>
-        <member name="F:DotnetClaw.Web.Gateway.MessageType.Error">
-            <summary>Server → client: error occurred.</summary>
-        </member>
-        <member name="F:DotnetClaw.Web.Gateway.MessageType.Ping">
-            <summary>Server → client: keepalive ping.</summary>
-        </member>
-        <member name="F:DotnetClaw.Web.Gateway.MessageType.Pong">
-            <summary>Client → server: keepalive pong.</summary>
-        </member>
-        <member name="T:DotnetClaw.Web.Gateway.GatewayMessageFactory">
-            <summary>Factory methods for constructing well-formed <see cref="T:DotnetClaw.Web.Gateway.GatewayMessage"/> instances.</summary>
-        </member>
-        <member name="M:DotnetClaw.Web.Gateway.GatewayMessageFactory.HelloAck(System.String,System.String,System.String)">
-            <summary>Build a <c>hello_ack</c> message sent to a client after handshake.</summary>
-        </member>
-        <member name="M:DotnetClaw.Web.Gateway.GatewayMessageFactory.AgentChunk(System.String,System.String,System.String,System.String,System.Boolean)">
-            <summary>Build an <c>agent_chunk</c> streaming token message.</summary>
-        </member>
-        <member name="M:DotnetClaw.Web.Gateway.GatewayMessageFactory.AgentResponse(System.String,System.String,System.String,System.String)">
-            <summary>Build an <c>agent_response</c> full-turn completion message.</summary>
-        </member>
-        <member name="M:DotnetClaw.Web.Gateway.GatewayMessageFactory.ToolCall(System.String,System.String,System.String,System.String,System.Object)">
-            <summary>Build a <c>tool_call</c> notification message.</summary>
-        </member>
-        <member name="M:DotnetClaw.Web.Gateway.GatewayMessageFactory.ToolResult(System.String,System.String,System.String,System.String,System.String)">
-            <summary>Build a <c>tool_result</c> notification message.</summary>
-        </member>
-        <member name="M:DotnetClaw.Web.Gateway.GatewayMessageFactory.Error(System.String,System.String,System.String,System.String)">
-            <summary>Build an <c>error</c> message.</summary>
-        </member>
-        <member name="M:DotnetClaw.Web.Gateway.GatewayMessageFactory.Ping">
-            <summary>Build a <c>ping</c> keepalive message.</summary>
-        </member>
-        <member name="T:DotnetClaw.Web.Gateway.GatewayMiddleware">
-            <summary>
-            Handles the lifecycle of a single WebSocket connection:
-              1. Upgrades the HTTP request to a WebSocket.
-              2. Waits for a <c>hello</c> handshake message from the client.
-              3. Validates the channel and optional auth token.
-              4. Registers the client in the <see cref="T:DotnetClaw.Web.Gateway.GatewayHub"/>.
-              5. Runs the receive loop, dispatching messages to the hub.
-              6. Unregisters the client when the connection closes.
-            </summary>
-        </member>
-        <member name="M:DotnetClaw.Web.Gateway.GatewayMiddleware.#ctor(DotnetClaw.Web.Gateway.GatewayHub,Microsoft.Extensions.Options.IOptions{DotnetClaw.Web.Gateway.GatewayOptions},Microsoft.Extensions.Logging.ILogger{DotnetClaw.Web.Gateway.GatewayMiddleware})">
-            <summary>
-            Handles the lifecycle of a single WebSocket connection:
-              1. Upgrades the HTTP request to a WebSocket.
-              2. Waits for a <c>hello</c> handshake message from the client.
-              3. Validates the channel and optional auth token.
-              4. Registers the client in the <see cref="T:DotnetClaw.Web.Gateway.GatewayHub"/>.
-              5. Runs the receive loop, dispatching messages to the hub.
-              6. Unregisters the client when the connection closes.
-            </summary>
-        </member>
-        <member name="M:DotnetClaw.Web.Gateway.GatewayMiddleware.HandleAsync(Microsoft.AspNetCore.Http.HttpContext)">
-            <summary>
-            Entry point for each incoming WebSocket request.
-            Called from the <c>app.MapGateway()</c> endpoint registered in <c>Program.cs</c>.
-            </summary>
-        </member>
-        <member name="M:DotnetClaw.Web.Gateway.GatewayMiddleware.ReceiveMessageAsync(System.Net.WebSockets.WebSocket,System.Threading.CancellationToken)">
-            <summary>
-            Reads a complete WebSocket text message, accumulating fragmented frames, then
-            deserialises it as a <see cref="T:DotnetClaw.Web.Gateway.GatewayMessage"/>.
-            Returns <c>null</c> when the connection is closed.
-            </summary>
-        </member>
-        <member name="M:DotnetClaw.Web.Gateway.GatewayMiddleware.ValidateToken(System.String)">
-            <summary>
-            Validates an auth token. Currently a stub — when <see cref="P:DotnetClaw.Web.Gateway.GatewayOptions.TokenValidation"/>
-            is false this is never called. Future implementations should verify against a secret store.
-            </summary>
-        </member>
-        <member name="T:DotnetClaw.Web.Gateway.GatewayOptions">
-            <summary>
-            Configuration options for the WebSocket Gateway control plane.
-            Bound from <c>appsettings.json</c> under the <c>"Gateway"</c> section.
-            </summary>
-        </member>
-        <member name="F:DotnetClaw.Web.Gateway.GatewayOptions.SectionName">
-            <summary>The configuration section name.</summary>
-        </member>
-        <member name="P:DotnetClaw.Web.Gateway.GatewayOptions.Enabled">
-            <summary>Master switch — when false the /ws endpoint is not mapped.</summary>
-        </member>
-        <member name="P:DotnetClaw.Web.Gateway.GatewayOptions.Path">
-            <summary>URL path for the WebSocket endpoint.</summary>
-        </member>
-        <member name="P:DotnetClaw.Web.Gateway.GatewayOptions.AllowedChannels">
-            <summary>
-            Channel names accepted by the gateway.
-            Connections claiming an unknown channel are rejected.
-            </summary>
-        </member>
-        <member name="P:DotnetClaw.Web.Gateway.GatewayOptions.TokenValidation">
-            <summary>
-            When true, the gateway validates the <c>token</c> field of the hello message.
-            Set to false during development / single-user deployments.
-            </summary>
-        </member>
-        <member name="P:DotnetClaw.Web.Gateway.GatewayOptions.MaxConnections">
-            <summary>Maximum number of simultaneous WebSocket connections.</summary>
-        </member>
-        <member name="P:DotnetClaw.Web.Gateway.GatewayOptions.PingIntervalSeconds">
-            <summary>How often (in seconds) the server sends a <c>ping</c> frame to each client.</summary>
-        </member>
-        <member name="T:DotnetClaw.Web.Gateway.TelegramGatewayAdapter">
-             <summary>
-             Hosted service that bridges the Telegram channel into the <see cref="T:DotnetClaw.Web.Gateway.GatewayHub"/>
-             without using a WebSocket — it communicates with the hub directly via method calls.
-            
-             Responsibilities:
-               • Maintains a per-Telegram-chat session ID so the agent has conversation context.
-               • Accepts inbound Telegram messages via <see cref="M:DotnetClaw.Web.Gateway.TelegramGatewayAdapter.InjectTelegramMessageAsync(System.Int64,System.String,System.Nullable{System.Int32},System.Threading.CancellationToken)"/>.
-               • Runs the agent turn, streaming <c>agent_chunk</c> / <c>tool_call</c> /
-                 <c>tool_result</c> frames to all WebSocket clients subscribed on the
-                 <c>"telegram"</c> channel (for real-time observability in the Web UI or CLI).
-               • Sends the final response back to the Telegram chat via the bot client.
-            
-             Wiring status:
-               ✅ Adapter is implemented and registered as a hosted service.
-               ⚠️  <see cref="M:DotnetClaw.Web.Gateway.TelegramGatewayAdapter.InjectTelegramMessageAsync(System.Int64,System.String,System.Nullable{System.Int32},System.Threading.CancellationToken)"/> must be called by the Telegram polling
-                   layer. The simplest integration is to inject this adapter into
-                   <see cref="T:DotnetClaw.Telegram.TelegramPollingService"/> and call it alongside
-                   <c>TelegramCommandRouter.DispatchAsync</c>, or to replace the router call
-                   entirely once the gateway is the canonical agent entry point.
-             </summary>
-        </member>
-        <member name="M:DotnetClaw.Web.Gateway.TelegramGatewayAdapter.#ctor(DotnetClaw.Web.Gateway.GatewayHub,DotnetClaw.Agents.ClawAgentLoop,DotnetClaw.Telegram.ITelegramBotClient,Microsoft.Extensions.Logging.ILogger{DotnetClaw.Web.Gateway.TelegramGatewayAdapter})">
-             <summary>
-             Hosted service that bridges the Telegram channel into the <see cref="T:DotnetClaw.Web.Gateway.GatewayHub"/>
-             without using a WebSocket — it communicates with the hub directly via method calls.
-            
-             Responsibilities:
-               • Maintains a per-Telegram-chat session ID so the agent has conversation context.
-               • Accepts inbound Telegram messages via <see cref="M:DotnetClaw.Web.Gateway.TelegramGatewayAdapter.InjectTelegramMessageAsync(System.Int64,System.String,System.Nullable{System.Int32},System.Threading.CancellationToken)"/>.
-               • Runs the agent turn, streaming <c>agent_chunk</c> / <c>tool_call</c> /
-                 <c>tool_result</c> frames to all WebSocket clients subscribed on the
-                 <c>"telegram"</c> channel (for real-time observability in the Web UI or CLI).
-               • Sends the final response back to the Telegram chat via the bot client.
-            
-             Wiring status:
-               ✅ Adapter is implemented and registered as a hosted service.
-               ⚠️  <see cref="M:DotnetClaw.Web.Gateway.TelegramGatewayAdapter.InjectTelegramMessageAsync(System.Int64,System.String,System.Nullable{System.Int32},System.Threading.CancellationToken)"/> must be called by the Telegram polling
-                   layer. The simplest integration is to inject this adapter into
-                   <see cref="T:DotnetClaw.Telegram.TelegramPollingService"/> and call it alongside
-                   <c>TelegramCommandRouter.DispatchAsync</c>, or to replace the router call
-                   entirely once the gateway is the canonical agent entry point.
-             </summary>
-        </member>
-        <member name="M:DotnetClaw.Web.Gateway.TelegramGatewayAdapter.StartAsync(System.Threading.CancellationToken)">
-            <inheritdoc />
-        </member>
-        <member name="M:DotnetClaw.Web.Gateway.TelegramGatewayAdapter.StopAsync(System.Threading.CancellationToken)">
-            <inheritdoc />
-        </member>
-        <member name="M:DotnetClaw.Web.Gateway.TelegramGatewayAdapter.InjectTelegramMessageAsync(System.Int64,System.String,System.Nullable{System.Int32},System.Threading.CancellationToken)">
-            <summary>
-            Injects an inbound Telegram message into the <see cref="T:DotnetClaw.Web.Gateway.GatewayHub"/> as a
-            <c>chat_message</c> frame, runs the agent, streams response frames to any
-            WebSocket observers on the <c>"telegram"</c> channel, and replies to the chat.
-            </summary>
-            <param name="chatId">Telegram chat identifier.</param>
-            <param name="text">The user's message text.</param>
-            <param name="replyToMessageId">Optional Telegram message to reply to.</param>
-            <param name="ct">Cancellation token.</param>
-        </member>
-        <member name="M:DotnetClaw.Web.Gateway.TelegramGatewayAdapter.ResetSession(System.Int64)">
-            <summary>
-            Resets the conversation session for a specific Telegram chat,
-            forcing a new session ID on the next message.
-            </summary>
-            <param name="chatId">Telegram chat identifier to reset.</param>
         </member>
         <member name="E:DotnetClaw.Web.Services.TerminalService.OnOutput">
             <summary>
@@ -359,15 +72,14 @@
         </member>
         <member name="M:DotnetClaw.Web.Services.TerminalService.InitializeAsync(System.Threading.CancellationToken)">
             <summary>
-            One-time initialisation: prints the banner, initialises the agent,
-            then emits the first prompt. Safe to call concurrently — only the
-            first caller wins; subsequent calls return immediately.
+            One-time initialisation: prints the banner, then emits the first prompt.
+            Safe to call concurrently — only the first caller wins.
             </summary>
         </member>
         <member name="M:DotnetClaw.Web.Services.TerminalService.HandleInputAsync(System.String,System.Threading.CancellationToken)">
             <summary>
             Process a single input line submitted by the user from xterm.js.
-            Handles meta-commands locally; routes everything else to the agent.
+            Handles meta-commands locally; routes everything else to the CLI via gateway.
             </summary>
         </member>
         <member name="M:DotnetClaw.Web.Services.TerminalService.CancelCurrent">
