@@ -1,62 +1,54 @@
-using DotnetClaw.Agents;
-using DotnetClaw.UI;
-using DotnetClaw.Workspace;
+using DotnetClaw.Gateway;
+using DotnetClaw.Web.Gateway;
 
 namespace DotnetClaw.Web.Services;
 
 // ============================================================================
-//  CapturingRenderer — IConsoleRenderer that streams tokens to a callback
+//  AgentBridgeService — bridges the Blazor Chat UI to the CLI gateway
 // ============================================================================
 
-internal sealed class CapturingRenderer(Action<string> onChunk) : IConsoleRenderer
+public sealed class AgentBridgeService : IAsyncDisposable
 {
-    private readonly System.Text.StringBuilder _buffer = new();
-
-    public string CapturedText => _buffer.ToString();
-
-    public void BeginAssistantTurn() { }
-    public void WriteChunk(string text) { _buffer.Append(text); onChunk(text); }
-    public void EndAssistantTurn() { }
-    public void WriteWarning(string message) { }
-    public void WriteToolCall(string toolName, string input) { }
-    public void WriteToolResult(string toolName, bool success, string preview) { }
-    public void WriteError(string message) { }
-    public void WriteBanner() { }
-    public void WriteWorkspaceStatus(WorkspaceLoadResult result) { }
-    public string PromptUser(string prompt = "> ") => string.Empty;
-}
-
-// ============================================================================
-//  AgentBridgeService — bridges the Blazor UI to the ClawAgentLoop
-// ============================================================================
-
-public sealed class AgentBridgeService
-{
-    private readonly ClawAgentLoop _agentLoop;
+    private readonly WebGatewayClientService _gateway;
     private readonly AppState _appState;
     private readonly ChatService _chatService;
     private readonly ILogger<AgentBridgeService> _logger;
 
+    // Unique per-scope session ID used to correlate gateway responses.
+    private readonly string _sessionId = Guid.NewGuid().ToString("N");
+
+    // Message ID for the currently streaming assistant message.
+    private Guid _currentMsgId;
+    private TaskCompletionSource? _turnTcs;
+
     public AgentBridgeService(
-        ClawAgentLoop agentLoop,
+        WebGatewayClientService gateway,
         AppState appState,
         ChatService chatService,
         ILogger<AgentBridgeService> logger)
     {
-        _agentLoop = agentLoop;
-        _appState = appState;
+        _gateway     = gateway;
+        _appState    = appState;
         _chatService = chatService;
-        _logger = logger;
+        _logger      = logger;
+
+        _gateway.Subscribe(_sessionId, HandleGatewayMessageAsync);
     }
 
-    public bool IsInitialized { get; private set; }
+    public bool IsInitialized => _gateway.IsConnected;
 
-    public async Task InitializeAsync(CancellationToken ct = default)
+    /// <summary>System prompt is owned by the CLI; this stub keeps the Home page working.</summary>
+    public string EffectiveSystemPrompt => _gateway.IsConnected
+        ? "(System prompt is managed by the DotnetClaw CLI process.)"
+        : string.Empty;
+
+    public Task InitializeAsync(CancellationToken ct = default)
     {
-        if (IsInitialized) return;
-        await _agentLoop.InitialiseAsync(ct);
-        IsInitialized = true;
-        _chatService.AddSystemMessage("DotnetClaw agent initialized. Workspace loaded.");
+        if (!_gateway.IsConnected)
+            _chatService.AddSystemMessage("Connecting to DotnetClaw gateway…");
+        else
+            _chatService.AddSystemMessage("DotnetClaw gateway connected.");
+        return Task.CompletedTask;
     }
 
     public async Task SendMessageAsync(string userInput, Action<string>? onChunk = null, CancellationToken ct = default)
@@ -66,43 +58,81 @@ public sealed class AgentBridgeService
         _chatService.AddUserMessage(userInput);
         _appState.SetAgentRunning(true, "Thinking…");
 
-        var assistantMsgId = _chatService.BeginAssistantMessage();
+        _currentMsgId = _chatService.BeginAssistantMessage();
+        _turnTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        // Store the onChunk callback so the gateway handler can call it
+        _pendingOnChunk = onChunk;
 
         try
         {
-            var renderer = new CapturingRenderer(chunk =>
-            {
-                _chatService.AppendToAssistantMessage(assistantMsgId, chunk);
-                onChunk?.Invoke(chunk);
-            });
+            await _gateway.SendChatMessageAsync(userInput, _sessionId, ct);
 
-            await _agentLoop.RunTurnAsync(userInput, ct, renderer);
-            _chatService.FinalizeAssistantMessage(assistantMsgId);
-            _appState.RecordTurn();
+            // Wait for agent_response (or error) to arrive via the gateway handler
+            using var reg = ct.Register(() => _turnTcs.TrySetCanceled());
+            await _turnTcs.Task;
         }
         catch (OperationCanceledException)
         {
-            _chatService.FinalizeAssistantMessage(assistantMsgId, "[Cancelled]");
+            _chatService.FinalizeAssistantMessage(_currentMsgId, "[Cancelled]");
         }
         catch (Exception ex)
         {
             AgentBridgeLog.AgentTurnError(_logger, ex);
-            _chatService.FinalizeAssistantMessage(assistantMsgId, $"[Error: {ex.Message}]");
+            _chatService.FinalizeAssistantMessage(_currentMsgId, $"[Error: {ex.Message}]");
         }
         finally
         {
+            _pendingOnChunk = null;
             _appState.SetAgentRunning(false);
         }
     }
 
-    public async Task ResetAsync(CancellationToken ct = default)
+    public Task ResetAsync(CancellationToken ct = default)
     {
-        await _agentLoop.ResetAsync(ct);
         _chatService.Clear();
-        _chatService.AddSystemMessage("Conversation reset. Workspace reloaded.");
+        _chatService.AddSystemMessage("Resetting conversation…");
+        return _gateway.SendResetAsync(_sessionId, ct);
     }
 
-    public string EffectiveSystemPrompt => _agentLoop.EffectiveSystemPrompt;
+    // ── Gateway message handler ───────────────────────────────────────────────
+
+    private Action<string>? _pendingOnChunk;
+
+    private Task HandleGatewayMessageAsync(GatewayMessage msg)
+    {
+        switch (msg.Type)
+        {
+            case MessageType.AgentChunk:
+                var chunk = msg.Text ?? string.Empty;
+                _chatService.AppendToAssistantMessage(_currentMsgId, chunk);
+                _pendingOnChunk?.Invoke(chunk);
+                break;
+
+            case MessageType.AgentResponse:
+                _chatService.FinalizeAssistantMessage(_currentMsgId);
+                _appState.RecordTurn();
+                _turnTcs?.TrySetResult();
+                break;
+
+            case MessageType.Error:
+                _chatService.FinalizeAssistantMessage(_currentMsgId, $"[Error: {msg.Text ?? "Unknown error"}]");
+                _turnTcs?.TrySetResult();
+                break;
+
+            case MessageType.ResetSession:
+                _chatService.AddSystemMessage("Conversation reset.");
+                break;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _gateway.Unsubscribe(_sessionId);
+        await Task.CompletedTask;
+    }
 }
 
 internal static partial class AgentBridgeLog

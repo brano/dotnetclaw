@@ -972,6 +972,159 @@
             Lets the agent inspect, reload, and query identity documents mid-conversation.
             </summary>
         </member>
+        <member name="M:DotnetClaw.Gateway.GatewayExtensions.AddGateway(Microsoft.Extensions.DependencyInjection.IServiceCollection)">
+            <summary>
+            Registers SignalR and the <see cref="T:DotnetClaw.Gateway.GatewayHub"/> with the DI container.
+            Call this from <c>Program.cs</c> before <c>builder.Build()</c>.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Gateway.GatewayExtensions.MapGateway(Microsoft.AspNetCore.Routing.IEndpointRouteBuilder)">
+            <summary>
+            Maps the <see cref="T:DotnetClaw.Gateway.GatewayHub"/> at the path defined in <see cref="T:DotnetClaw.Gateway.GatewayOptions"/>.
+            Call this after <c>builder.Build()</c>.
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.Gateway.GatewayHub">
+             <summary>
+             SignalR hub that multiplexes agent communication across Web, CLI and Telegram
+             channels.
+            
+             Channel management:
+               Clients pass <c>?channel=web-ui</c> (or <c>cli</c> / <c>telegram</c>) in the
+               connection query string. <see cref="M:DotnetClaw.Gateway.GatewayHub.OnConnectedAsync"/> adds the connection to
+               the corresponding SignalR group so the Telegram adapter can broadcast to all
+               observers of a channel without knowing individual connection IDs.
+            
+             Session routing:
+               Every hub method receives a <paramref name="sessionId"/> supplied by the caller.
+               The server echoes this id back in all response messages, allowing Web clients
+               that share one SignalR connection across multiple Blazor scopes to demultiplex
+               responses to the correct component.
+             </summary>
+        </member>
+        <member name="M:DotnetClaw.Gateway.GatewayHub.#ctor(DotnetClaw.Agents.ClawAgentLoop,Microsoft.Extensions.Logging.ILogger{DotnetClaw.Gateway.GatewayHub})">
+             <summary>
+             SignalR hub that multiplexes agent communication across Web, CLI and Telegram
+             channels.
+            
+             Channel management:
+               Clients pass <c>?channel=web-ui</c> (or <c>cli</c> / <c>telegram</c>) in the
+               connection query string. <see cref="M:DotnetClaw.Gateway.GatewayHub.OnConnectedAsync"/> adds the connection to
+               the corresponding SignalR group so the Telegram adapter can broadcast to all
+               observers of a channel without knowing individual connection IDs.
+            
+             Session routing:
+               Every hub method receives a <paramref name="sessionId"/> supplied by the caller.
+               The server echoes this id back in all response messages, allowing Web clients
+               that share one SignalR connection across multiple Blazor scopes to demultiplex
+               responses to the correct component.
+             </summary>
+        </member>
+        <member name="M:DotnetClaw.Gateway.GatewayHub.SendChatMessage(System.String,System.String)">
+            <summary>
+            Routes a user message to the agent loop and streams the response back to
+            the caller via <see cref="T:DotnetClaw.Gateway.IGatewayClient"/> methods.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Gateway.GatewayHub.ResetSession(System.String)">
+            <summary>Resets the agent conversation and sends a confirmation to the caller.</summary>
+        </member>
+        <member name="T:DotnetClaw.Gateway.MessageType">
+            <summary>
+            Well-known message-type identifiers shared between the server and the
+            <c>WebGatewayClientService</c> subscriber routing logic.
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.Gateway.GatewayMessage">
+            <summary>
+            Internal event envelope passed from <c>WebGatewayClientService</c> to
+            per-session subscribers (AgentBridgeService, TerminalService).
+            Not serialised over the wire — SignalR handles that via strongly-typed methods.
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.Gateway.GatewayOptions">
+            <summary>
+            Configuration options for the SignalR-based WebSocket Gateway.
+            Bound from <c>appsettings.json</c> under the <c>"Gateway"</c> section.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Gateway.GatewayOptions.Enabled">
+            <summary>Master switch — when false the /ws hub is not mapped.</summary>
+        </member>
+        <member name="P:DotnetClaw.Gateway.GatewayOptions.Path">
+            <summary>URL path for the SignalR hub endpoint.</summary>
+        </member>
+        <member name="P:DotnetClaw.Gateway.GatewayOptions.Port">
+            <summary>TCP port on which Kestrel listens for gateway connections.</summary>
+        </member>
+        <member name="P:DotnetClaw.Gateway.GatewayOptions.AllowedChannels">
+            <summary>Channel names accepted by the gateway (validated on connect).</summary>
+        </member>
+        <member name="P:DotnetClaw.Gateway.GatewayOptions.MaxConnections">
+            <summary>Maximum number of simultaneous connections.</summary>
+        </member>
+        <member name="T:DotnetClaw.Gateway.IGatewayClient">
+            <summary>
+            Defines the methods the server can invoke on connected gateway clients.
+            Used as the type parameter for <see cref="T:DotnetClaw.Gateway.GatewayHub"/> so the compiler
+            enforces the outbound contract.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Gateway.IGatewayClient.ReceiveChunk(System.String,System.String)">
+            <summary>Streaming token chunk from the agent.</summary>
+        </member>
+        <member name="M:DotnetClaw.Gateway.IGatewayClient.ReceiveAgentResponse(System.String,System.String)">
+            <summary>Full agent response — end of turn.</summary>
+        </member>
+        <member name="M:DotnetClaw.Gateway.IGatewayClient.ReceiveToolCall(System.String,System.String,System.String)">
+            <summary>Agent is invoking a tool.</summary>
+        </member>
+        <member name="M:DotnetClaw.Gateway.IGatewayClient.ReceiveToolResult(System.String,System.String,System.String)">
+            <summary>Tool execution result.</summary>
+        </member>
+        <member name="M:DotnetClaw.Gateway.IGatewayClient.ReceiveError(System.String,System.String)">
+            <summary>An error occurred during the agent turn.</summary>
+        </member>
+        <member name="M:DotnetClaw.Gateway.IGatewayClient.OnSessionReset(System.String)">
+            <summary>Confirmation that the session was reset.</summary>
+        </member>
+        <member name="T:DotnetClaw.Gateway.TelegramGatewayAdapter">
+             <summary>
+             Hosted service that bridges the Telegram channel into the SignalR
+             <see cref="T:DotnetClaw.Gateway.GatewayHub"/> without a real WebSocket connection — it pushes
+             messages directly through <see cref="T:Microsoft.AspNetCore.SignalR.IHubContext`2"/>.
+            
+             Responsibilities:
+               • Maintains a per-Telegram-chat session ID for agent conversation context.
+               • Accepts inbound Telegram messages via <see cref="M:DotnetClaw.Gateway.TelegramGatewayAdapter.InjectTelegramMessageAsync(System.Int64,System.String,System.Nullable{System.Int32},System.Threading.CancellationToken)"/>.
+               • Streams <c>agent_chunk</c> / <c>tool_call</c> / <c>tool_result</c> frames to all
+                 SignalR clients in the <c>"telegram"</c> group (real-time observability).
+               • Sends the final response back to the Telegram chat via the bot client.
+             </summary>
+        </member>
+        <member name="M:DotnetClaw.Gateway.TelegramGatewayAdapter.#ctor(Microsoft.AspNetCore.SignalR.IHubContext{DotnetClaw.Gateway.GatewayHub,DotnetClaw.Gateway.IGatewayClient},DotnetClaw.Agents.ClawAgentLoop,DotnetClaw.Telegram.ITelegramBotClient,Microsoft.Extensions.Logging.ILogger{DotnetClaw.Gateway.TelegramGatewayAdapter})">
+             <summary>
+             Hosted service that bridges the Telegram channel into the SignalR
+             <see cref="T:DotnetClaw.Gateway.GatewayHub"/> without a real WebSocket connection — it pushes
+             messages directly through <see cref="T:Microsoft.AspNetCore.SignalR.IHubContext`2"/>.
+            
+             Responsibilities:
+               • Maintains a per-Telegram-chat session ID for agent conversation context.
+               • Accepts inbound Telegram messages via <see cref="M:DotnetClaw.Gateway.TelegramGatewayAdapter.InjectTelegramMessageAsync(System.Int64,System.String,System.Nullable{System.Int32},System.Threading.CancellationToken)"/>.
+               • Streams <c>agent_chunk</c> / <c>tool_call</c> / <c>tool_result</c> frames to all
+                 SignalR clients in the <c>"telegram"</c> group (real-time observability).
+               • Sends the final response back to the Telegram chat via the bot client.
+             </summary>
+        </member>
+        <member name="M:DotnetClaw.Gateway.TelegramGatewayAdapter.InjectTelegramMessageAsync(System.Int64,System.String,System.Nullable{System.Int32},System.Threading.CancellationToken)">
+            <summary>
+            Injects an inbound Telegram message, runs the agent, streams chunks to
+            the <c>"telegram"</c> SignalR group for observability, and replies to the chat.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Gateway.TelegramGatewayAdapter.ResetSession(System.Int64)">
+            <summary>Clears the session for a Telegram chat, forcing a new session on next message.</summary>
+        </member>
         <member name="M:DotnetClaw.Hub.HubClient.SearchAsync(System.String,System.Threading.CancellationToken)">
             <summary>
             Search for skills on the hub. Pass null or empty string to list all.
@@ -1506,6 +1659,11 @@
             <summary>
             The canonical order in which well-known identity documents are injected.
             SOUL → AGENTS → USER → CONTEXT gives a natural "who I am → how I work → who you are → current context" flow.
+            </summary>
+        </member>
+        <member name="T:Program">
+            <summary>
+            Auto-generated public partial Program class for top-level statement apps.
             </summary>
         </member>
     </members>

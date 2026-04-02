@@ -1,0 +1,193 @@
+@page "/gateway"
+@rendermode InteractiveServer
+@using DotnetClaw.Gateway
+@using DotnetClaw.Web.Gateway
+@using Microsoft.Extensions.Options
+@inject WebGatewayClientService GatewayClientSvc
+@inject IOptions<GatewayClientOptions> GatewayClientOpts
+@implements IDisposable
+
+<PageTitle>Gateway — 🦀 DotnetClaw</PageTitle>
+
+<div class="flex flex-col h-full">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between px-6 py-4 border-b border-[hsl(216_34%_17%)] shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="flex items-center justify-center w-8 h-8 rounded-full bg-[hsl(220_100%_54%/0.15)] border border-[hsl(220_100%_54%/0.3)]">
+                <svg class="w-4 h-4 text-[hsl(220_100%_63%)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                </svg>
+            </div>
+            <div>
+                <h2 class="text-sm font-semibold text-[hsl(213_31%_91%)]">SignalR Gateway</h2>
+                <div class="flex items-center gap-1.5">
+                    <div class="@(GatewayClientSvc.IsConnected ? "w-1.5 h-1.5 rounded-full bg-emerald-400" : "w-1.5 h-1.5 rounded-full bg-[hsl(215.4_16.3%_35%)]")"></div>
+                    <span class="text-xs text-[hsl(215.4_16.3%_50%)]">@StatusText</span>
+                </div>
+            </div>
+        </div>
+        <button type="button" @onclick="ClearLog"
+            class="px-3 py-1.5 rounded-md text-xs border border-[hsl(216_34%_17%)] text-[hsl(215.4_16.3%_56.9%)] hover:border-slate-600 hover:text-slate-300 transition-colors">
+            Clear log
+        </button>
+    </div>
+
+    <!-- Connection info bar -->
+    <div class="px-6 py-2 border-b border-[hsl(216_34%_17%)] bg-[hsl(222.2_47.4%_6%)] flex items-center gap-4 text-xs text-[hsl(215.4_16.3%_45%)] shrink-0">
+        <span>Endpoint: <code class="text-[hsl(215.4_16.3%_65%)]">@GatewayClientOpts.Value.ServerUrl</code></span>
+        <span>Channel: <code class="text-[hsl(215.4_16.3%_65%)]">@GatewayClientOpts.Value.Channel</code></span>
+        <span>Session: <code class="text-[hsl(215.4_16.3%_65%)] font-mono">@_sessionId[..8]…</code></span>
+    </div>
+
+    <!-- Message log -->
+    <div class="flex-1 overflow-y-auto px-6 py-4 space-y-2 font-mono text-xs">
+
+        @if (_log.Count == 0)
+        {
+            <div class="flex flex-col items-center justify-center h-full text-center py-16 space-y-3">
+                <div class="flex items-center justify-center w-14 h-14 rounded-2xl bg-[hsl(220_100%_54%/0.08)] border border-[hsl(220_100%_54%/0.15)]">
+                    <svg class="w-6 h-6 text-[hsl(220_100%_54%/0.4)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-[hsl(213_31%_91%)] font-sans">No messages yet</p>
+                    <p class="text-xs text-[hsl(215.4_16.3%_40%)] mt-1 font-sans">Send a message below to test the gateway round-trip.</p>
+                </div>
+            </div>
+        }
+
+        @foreach (var entry in _log)
+        {
+            <div class="flex gap-3 py-0.5">
+                <span class="text-[hsl(215.4_16.3%_30%)] shrink-0 w-20 text-right">@entry.Time</span>
+                <span class="@DirectionClass(entry.Direction) shrink-0">@entry.Direction</span>
+                <span class="@TypeClass(entry.Type) shrink-0 w-28">@entry.Type</span>
+                <span class="text-[hsl(213_31%_70%)] truncate">@entry.Summary</span>
+            </div>
+        }
+    </div>
+
+    <!-- Input area -->
+    <div class="shrink-0 border-t border-[hsl(216_34%_17%)] px-6 py-4">
+        <div class="flex items-center gap-3">
+            <input
+                @bind="_userInput"
+                @bind:event="oninput"
+                @onkeydown="HandleKeyDown"
+                placeholder="@(GatewayClientSvc.IsConnected ? "Send a test message to the agent…" : "Waiting for gateway connection…")"
+                disabled="@(!GatewayClientSvc.IsConnected || _busy)"
+                class="flex-1 rounded-lg border border-[hsl(216_34%_17%)] bg-[hsl(222.2_47.4%_8%)] px-4 py-2 text-sm text-[hsl(213_31%_91%)] placeholder:text-[hsl(215.4_16.3%_35%)] focus:outline-none focus:ring-1 focus:ring-[hsl(220_100%_54%)] disabled:opacity-40 disabled:cursor-not-allowed font-mono" />
+            <button type="button" @onclick="SendAsync"
+                disabled="@(!GatewayClientSvc.IsConnected || string.IsNullOrWhiteSpace(_userInput) || _busy)"
+                class="px-4 py-2 rounded-lg bg-[hsl(220_100%_54%)] text-white text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[hsl(220_100%_60%)] transition-colors">
+                Send
+            </button>
+        </div>
+        <p class="text-[10px] text-[hsl(215.4_16.3%_30%)] mt-2 font-sans">
+            Channel: <code>@GatewayClientOpts.Value.Channel</code> · Press Enter to send
+        </p>
+    </div>
+</div>
+
+@code {
+    private readonly string _sessionId = "diag-" + Guid.NewGuid().ToString("N");
+    private readonly List<LogEntry> _log = [];
+
+    private string _userInput = string.Empty;
+    private bool _busy;
+
+    private string StatusText => GatewayClientSvc.IsConnected ? "Connected" : "Disconnected";
+
+    // ── Lifecycle ─────────────────────────────────────────────────────────────
+
+    protected override void OnInitialized()
+    {
+        GatewayClientSvc.Subscribe(_sessionId, OnGatewayMessageAsync);
+    }
+
+    public void Dispose()
+    {
+        GatewayClientSvc.Unsubscribe(_sessionId);
+    }
+
+    // ── Actions ───────────────────────────────────────────────────────────────
+
+    private async Task SendAsync()
+    {
+        if (!GatewayClientSvc.IsConnected || string.IsNullOrWhiteSpace(_userInput) || _busy)
+            return;
+
+        var text = _userInput.Trim();
+        _userInput = string.Empty;
+        _busy = true;
+
+        AddEntry("→", MessageType.AgentChunk, text, $"you: {text}");
+        await GatewayClientSvc.SendChatMessageAsync(text, _sessionId);
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await SendAsync();
+    }
+
+    private void ClearLog()
+    {
+        _log.Clear();
+        _busy = false;
+        StateHasChanged();
+    }
+
+    // ── Gateway message handler ───────────────────────────────────────────────
+
+    private Task OnGatewayMessageAsync(DotnetClaw.Gateway.GatewayMessage msg)
+    {
+        var (type, summary) = msg.Type switch
+        {
+            MessageType.AgentChunk    => (MessageType.AgentChunk,    $"chunk: {Truncate(msg.Text, 80)}"),
+            MessageType.AgentResponse => (MessageType.AgentResponse, "agent_response (turn complete)"),
+            MessageType.ToolCall      => (MessageType.ToolCall,      $"tool={msg.Tool}"),
+            MessageType.ToolResult    => (MessageType.ToolResult,    $"tool={msg.Tool} → result"),
+            MessageType.Error         => (MessageType.Error,         msg.Text ?? "error"),
+            MessageType.ResetSession  => (MessageType.ResetSession,  "session reset"),
+            _                         => (msg.Type,                  msg.Type),
+        };
+
+        if (msg.Type == MessageType.AgentResponse || msg.Type == MessageType.Error)
+            _busy = false;
+
+        AddEntry("←", type, type, summary);
+        InvokeAsync(StateHasChanged);
+        return Task.CompletedTask;
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private void AddEntry(string direction, string type, string rawType, string summary)
+    {
+        _log.Add(new LogEntry(DateTime.Now.ToString("HH:mm:ss.fff"), direction, type, summary));
+        if (_log.Count > 500) _log.RemoveAt(0);
+    }
+
+    private static string Truncate(string? s, int max)
+        => s is null ? string.Empty : s.Length <= max ? s : s[..max] + "…";
+
+    private static string DirectionClass(string d) => d switch
+    {
+        "→" => "text-[hsl(220_100%_63%)]",
+        "←" => "text-emerald-400",
+        _   => "text-[hsl(215.4_16.3%_40%)]",
+    };
+
+    private static string TypeClass(string t) => t switch
+    {
+        MessageType.AgentChunk or MessageType.AgentResponse => "text-emerald-400",
+        MessageType.ToolCall   or MessageType.ToolResult    => "text-amber-400",
+        MessageType.Error                                    => "text-red-400",
+        MessageType.ResetSession                             => "text-purple-400",
+        _                                                    => "text-[hsl(215.4_16.3%_45%)]",
+    };
+
+    private sealed record LogEntry(string Time, string Direction, string Type, string Summary);
+}

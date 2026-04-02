@@ -17,6 +17,7 @@ public sealed record ChatMessage(
 
 public sealed class ChatService
 {
+    private readonly Lock _lock = new();
     private readonly List<ChatMessage> _messages = [];
     private readonly AppState _appState;
 
@@ -25,65 +26,80 @@ public sealed class ChatService
         _appState = appState;
     }
 
-    public IReadOnlyList<ChatMessage> Messages => _messages.AsReadOnly();
+    /// <summary>
+    /// Returns a snapshot of the current messages.
+    /// A snapshot (not the live list) is returned so that the Blazor render loop
+    /// can iterate safely even if the gateway background thread appends a chunk
+    /// concurrently.
+    /// </summary>
+    public IReadOnlyList<ChatMessage> Messages { get { lock (_lock) { return [.._messages]; } } }
+
     public bool IsThinking { get; private set; }
 
     public event Action? OnMessagesChanged;
 
     public void AddUserMessage(string content)
     {
-        _messages.Add(new ChatMessage(Guid.NewGuid(), MessageRole.User, content, DateTime.UtcNow));
+        lock (_lock) _messages.Add(new ChatMessage(Guid.NewGuid(), MessageRole.User, content, DateTime.UtcNow));
         NotifyChanged();
     }
 
     public Guid BeginAssistantMessage()
     {
-        IsThinking = true;
         var id = Guid.NewGuid();
-        _messages.Add(new ChatMessage(id, MessageRole.Assistant, string.Empty, DateTime.UtcNow, IsStreaming: true));
+        lock (_lock)
+        {
+            IsThinking = true;
+            _messages.Add(new ChatMessage(id, MessageRole.Assistant, string.Empty, DateTime.UtcNow, IsStreaming: true));
+        }
         NotifyChanged();
         return id;
     }
 
     public void AppendToAssistantMessage(Guid id, string chunk)
     {
-        var idx = _messages.FindIndex(m => m.Id == id);
-        if (idx < 0) return;
-        var existing = _messages[idx];
-        _messages[idx] = existing with { Content = existing.Content + chunk };
+        lock (_lock)
+        {
+            var idx = _messages.FindIndex(m => m.Id == id);
+            if (idx < 0) return;
+            var existing = _messages[idx];
+            _messages[idx] = existing with { Content = existing.Content + chunk };
+        }
         NotifyChanged();
     }
 
     public void FinalizeAssistantMessage(Guid id, string? finalContent = null)
     {
-        IsThinking = false;
-        var idx = _messages.FindIndex(m => m.Id == id);
-        if (idx < 0) return;
-        var existing = _messages[idx];
-        _messages[idx] = existing with
+        lock (_lock)
         {
-            Content = finalContent ?? existing.Content,
-            IsStreaming = false,
-        };
+            IsThinking = false;
+            var idx = _messages.FindIndex(m => m.Id == id);
+            if (idx < 0) return;
+            var existing = _messages[idx];
+            _messages[idx] = existing with
+            {
+                Content = finalContent ?? existing.Content,
+                IsStreaming = false,
+            };
+        }
         NotifyChanged();
     }
 
     public void AddToolCallMessage(string toolName, string result)
     {
-        _messages.Add(new ChatMessage(Guid.NewGuid(), MessageRole.ToolCall, result, DateTime.UtcNow, ToolName: toolName));
+        lock (_lock) _messages.Add(new ChatMessage(Guid.NewGuid(), MessageRole.ToolCall, result, DateTime.UtcNow, ToolName: toolName));
         NotifyChanged();
     }
 
     public void AddSystemMessage(string content)
     {
-        _messages.Add(new ChatMessage(Guid.NewGuid(), MessageRole.System, content, DateTime.UtcNow));
+        lock (_lock) _messages.Add(new ChatMessage(Guid.NewGuid(), MessageRole.System, content, DateTime.UtcNow));
         NotifyChanged();
     }
 
     public void Clear()
     {
-        _messages.Clear();
-        IsThinking = false;
+        lock (_lock) { _messages.Clear(); IsThinking = false; }
         NotifyChanged();
     }
 

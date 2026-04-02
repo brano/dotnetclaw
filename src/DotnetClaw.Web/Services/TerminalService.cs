@@ -1,11 +1,11 @@
 using System.Text;
-using DotnetClaw.Agents;
 using DotnetClaw.Config;
+using DotnetClaw.Gateway;
 using DotnetClaw.Hub;
 using DotnetClaw.UI;
+using DotnetClaw.Web.Gateway;
 using DotnetClaw.Workspace;
 using Microsoft.Extensions.Options;
-using Microsoft.SemanticKernel.ChatCompletion;
 
 namespace DotnetClaw.Web.Services;
 
@@ -18,6 +18,7 @@ namespace DotnetClaw.Web.Services;
 //      to xterm.js over Blazor Server's own SignalR circuit
 //    • Rolling buffer — new connections replay the last 64 KB of output
 //    • SemaphoreSlim — serialises agent input (one command at a time)
+//    • Agent turns are routed through WebGatewayClientService to the CLI process
 // ============================================================================
 
 public sealed class TerminalService : IDisposable
@@ -31,12 +32,23 @@ public sealed class TerminalService : IDisposable
     private CancellationTokenSource? _currentCts;
 
     // ── Dependencies ───────────────────────────────────────────────────────────
-    private readonly ClawAgentLoop _agentLoop;
+    private readonly WebGatewayClientService _gateway;
     private readonly AppState _appState;
     private readonly HubClient _hub;
     private readonly WorkspaceLoader _workspace;
     private readonly DotnetClawOptions _coreOpts;
     private readonly ILogger<TerminalService> _logger;
+
+    // ── ANSI renderer (stateful — maintains markdown streaming state per session) ──
+    // Shared across all gateway message handlers so the MarkdownAnsiStreamFormatter
+    // can correctly track bold/italic/code state across chunk boundaries.
+    private readonly TerminalAnsiRenderer _ansiRenderer;
+
+    // ── Gateway session ────────────────────────────────────────────────────────
+    // The terminal uses a fixed session ID so CLI-side conversation history
+    // is preserved across page reloads.
+    private static readonly string TerminalSessionId = "terminal-" + Guid.NewGuid().ToString("N")[..8];
+    private TaskCompletionSource? _agentTurnTcs;
 
     // ── State ──────────────────────────────────────────────────────────────────
     public bool IsInitialized { get; private set; }
@@ -48,19 +60,24 @@ public sealed class TerminalService : IDisposable
     public event Action<string>? OnOutput;
 
     public TerminalService(
-        ClawAgentLoop agentLoop,
+        WebGatewayClientService gateway,
         AppState appState,
         HubClient hub,
         WorkspaceLoader workspace,
         IOptions<DotnetClawOptions> coreOpts,
         ILogger<TerminalService> logger)
     {
-        _agentLoop = agentLoop;
-        _appState  = appState;
-        _hub       = hub;
+        _gateway  = gateway;
+        _appState = appState;
+        _hub      = hub;
         _workspace = workspace;
         _coreOpts  = coreOpts.Value;
         _logger    = logger;
+
+        // Emit is the sink — all ANSI text flows into the rolling buffer and fires OnOutput
+        _ansiRenderer = new TerminalAnsiRenderer(Emit);
+
+        _gateway.Subscribe(TerminalSessionId, HandleGatewayMessageAsync);
     }
 
     // ── Public API ─────────────────────────────────────────────────────────────
@@ -69,28 +86,30 @@ public sealed class TerminalService : IDisposable
     public string GetBufferedOutput() => _buffer.ToString();
 
     /// <summary>
-    /// One-time initialisation: prints the banner, initialises the agent,
-    /// then emits the first prompt. Safe to call concurrently — only the
-    /// first caller wins; subsequent calls return immediately.
+    /// One-time initialisation: prints the banner, then emits the first prompt.
+    /// Safe to call concurrently — only the first caller wins.
     /// </summary>
-    public async Task InitializeAsync(CancellationToken ct = default)
+    public Task InitializeAsync(CancellationToken ct = default)
     {
-        if (IsInitialized) return;
-
-        var renderer = new TerminalAnsiRenderer(Emit);
-        renderer.WriteBanner();
-
-        Emit($"\x1b[90mInitialising agent…\x1b[0m\r\n");
-        await _agentLoop.InitialiseAsync(ct);
+        if (IsInitialized) return Task.CompletedTask;
         IsInitialized = true;
 
-        _logger.LogInformation("TerminalService: agent initialised");
+        // Same banner as the CLI — TerminalAnsiRenderer is the single source of truth
+        _ansiRenderer.WriteBanner();
+
+        if (_gateway.IsConnected)
+            Emit($"\x1b[32m✓ Connected to gateway\x1b[0m  \x1b[90m(session: {TerminalSessionId[..16]}…)\x1b[0m\r\n");
+        else
+            Emit("\x1b[33m⚠ Gateway not connected — start the DotnetClaw CLI first.\x1b[0m\r\n");
+
+        _logger.LogInformation("TerminalService: initialised (session={SessionId})", TerminalSessionId);
         EmitPrompt();
+        return Task.CompletedTask;
     }
 
     /// <summary>
     /// Process a single input line submitted by the user from xterm.js.
-    /// Handles meta-commands locally; routes everything else to the agent.
+    /// Handles meta-commands locally; routes everything else to the CLI via gateway.
     /// </summary>
     public async Task HandleInputAsync(string line, CancellationToken ct = default)
     {
@@ -133,22 +152,9 @@ public sealed class TerminalService : IDisposable
                     return;
 
                 case "reset":
-                    Emit("\r\n\x1b[90mResetting conversation and reloading workspace…\x1b[0m\r\n");
-                    await _agentLoop.ResetAsync(_currentCts.Token);
-                    IsInitialized = true; // ResetAsync calls InitialiseAsync internally
-                    Emit("\x1b[32m✓ Conversation reset. Workspace reloaded.\x1b[0m\r\n");
-                    EmitPrompt();
-                    return;
-
-                case "history":
-                    EmitHistory();
-                    EmitPrompt();
-                    return;
-
-                case "workspace":
-                    var sysprompt = _agentLoop.EffectiveSystemPrompt;
-                    Emit($"\r\n\x1b[1m\x1b[34mAgent context:\x1b[0m\r\n");
-                    Emit($"  \x1b[90mSystem prompt: {sysprompt.Length:N0} chars\x1b[0m\r\n\r\n");
+                    Emit("\r\n\x1b[90mSending reset to CLI…\x1b[0m\r\n");
+                    await _gateway.SendResetAsync(TerminalSessionId, _currentCts.Token);
+                    Emit("\x1b[32m✓ Reset sent. Conversation will be cleared on the CLI.\x1b[0m\r\n");
                     EmitPrompt();
                     return;
 
@@ -167,16 +173,31 @@ public sealed class TerminalService : IDisposable
                 return;
             }
 
-            // ── Route to agent ─────────────────────────────────────────────────
+            // ── Route to CLI agent via gateway ─────────────────────────────────
+            if (!_gateway.IsConnected)
+            {
+                Emit("\r\n\x1b[1;31m✖ Not connected to gateway.\x1b[0m Start the DotnetClaw CLI first.\r\n");
+                EmitPrompt();
+                return;
+            }
+
             _appState.SetAgentRunning(true, "Processing…");
+            _agentTurnTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
             try
             {
-                var renderer = new TerminalAnsiRenderer(Emit);
-                await _agentLoop.RunTurnAsync(trimmed, _currentCts.Token, renderer);
+                // Emit the "🦀 DotnetClaw>" prefix and reset the markdown streaming state
+                _ansiRenderer.BeginAssistantTurn();
+                await _gateway.SendChatMessageAsync(trimmed, TerminalSessionId, _currentCts.Token);
+
+                // Wait for agent_response (or error) to arrive via the gateway handler
+                using var reg = _currentCts.Token.Register(() => _agentTurnTcs.TrySetCanceled());
+                await _agentTurnTcs.Task;
                 _appState.RecordTurn();
             }
             finally
             {
+                _agentTurnTcs = null;
                 _appState.SetAgentRunning(false);
             }
 
@@ -206,6 +227,47 @@ public sealed class TerminalService : IDisposable
     /// <summary>Cancel the currently executing command (triggered by Ctrl+C).</summary>
     public void CancelCurrent() => _currentCts?.Cancel();
 
+    // ── Gateway message handler ────────────────────────────────────────────────
+
+    private Task HandleGatewayMessageAsync(GatewayMessage msg)
+    {
+        switch (msg.Type)
+        {
+            case MessageType.AgentChunk:
+                // Feed raw text through the renderer so markdown is formatted to ANSI
+                _ansiRenderer.WriteChunk(msg.Text ?? string.Empty);
+                break;
+
+            case MessageType.ToolCall:
+                if (msg.Tool is not null)
+                    _ansiRenderer.WriteToolCall(msg.Tool, msg.Input ?? string.Empty);
+                break;
+
+            case MessageType.ToolResult:
+                if (msg.Tool is not null)
+                    _ansiRenderer.WriteToolResult(msg.Tool, success: true, msg.Text ?? string.Empty);
+                break;
+
+            case MessageType.AgentResponse:
+                // Flush any buffered markdown and emit the trailing newline
+                _ansiRenderer.EndAssistantTurn();
+                _agentTurnTcs?.TrySetResult();
+                break;
+
+            case MessageType.Error:
+                _ansiRenderer.EndAssistantTurn();
+                _ansiRenderer.WriteError(msg.Text ?? "error");
+                _agentTurnTcs?.TrySetResult();
+                break;
+
+            case MessageType.ResetSession:
+                Emit("\x1b[32m✓ Conversation reset.\x1b[0m\r\n");
+                break;
+        }
+
+        return Task.CompletedTask;
+    }
+
     // ── Private helpers ────────────────────────────────────────────────────────
 
     private void Emit(string text)
@@ -226,9 +288,7 @@ public sealed class TerminalService : IDisposable
     {
         Emit("\r\n\x1b[1m\x1b[34mAvailable commands\x1b[0m\r\n\r\n");
         Emit("  \x1b[33mhelp\x1b[0m                   Show this help\r\n");
-        Emit("  \x1b[33mreset\x1b[0m                  Reset conversation history and reload workspace\r\n");
-        Emit("  \x1b[33mhistory\x1b[0m                Show conversation history summary\r\n");
-        Emit("  \x1b[33mworkspace\x1b[0m              Show current workspace / agent context info\r\n");
+        Emit("  \x1b[33mreset\x1b[0m                  Reset CLI conversation history\r\n");
         Emit("  \x1b[33mclear\x1b[0m                  Clear the terminal screen\r\n");
         Emit("  \x1b[33mexit\x1b[0m                   Close terminal (close the browser tab)\r\n");
         Emit("\r\n");
@@ -239,44 +299,13 @@ public sealed class TerminalService : IDisposable
         Emit("  \x1b[33mhub install <name>\x1b[0m     Install (or update) a skill from the hub\r\n");
         Emit("  \x1b[33mhub list\x1b[0m               List skills installed in your workspace\r\n");
         Emit("\r\n");
-        Emit("  \x1b[90mAny other text is forwarded to the DotnetClaw AI agent.\x1b[0m\r\n");
+        Emit("  \x1b[90mAny other text is forwarded to the DotnetClaw AI agent via the gateway.\x1b[0m\r\n");
         Emit("\r\n");
         Emit("  \x1b[90mKeyboard shortcuts:\x1b[0m\r\n");
         Emit("  \x1b[90m  Ctrl+C   Cancel the current operation\x1b[0m\r\n");
         Emit("  \x1b[90m  Ctrl+L   Clear the terminal screen\x1b[0m\r\n");
         Emit("  \x1b[90m  Ctrl+U   Erase the current input line\x1b[0m\r\n");
         Emit("  \x1b[90m  ↑ / ↓   Navigate command history\x1b[0m\r\n");
-        Emit("\r\n");
-    }
-
-    private void EmitHistory()
-    {
-        var history = _agentLoop.GetHistory();
-
-        // Filter out system message
-        var entries = history
-            .Where(m => m.Role != AuthorRole.System)
-            .ToList();
-
-        if (entries.Count == 0)
-        {
-            Emit("\r\n\x1b[90mNo conversation history yet.\x1b[0m\r\n");
-            return;
-        }
-
-        Emit("\r\n\x1b[1m\x1b[34mConversation history\x1b[0m\r\n\r\n");
-
-        foreach (var msg in entries)
-        {
-            var role = msg.Role == AuthorRole.User
-                ? "\x1b[1m\x1b[97mYou\x1b[0m          "
-                : "\x1b[1m\x1b[35mDotnetClaw\x1b[0m  ";
-
-            var content = (msg.Content ?? string.Empty).Replace("\r\n", " ").Replace("\n", " ");
-            if (content.Length > 120) content = content[..120] + "…";
-
-            Emit($"  {role} {content}\r\n");
-        }
         Emit("\r\n");
     }
 
@@ -392,6 +421,7 @@ public sealed class TerminalService : IDisposable
 
     public void Dispose()
     {
+        _gateway.Unsubscribe(TerminalSessionId);
         _currentCts?.Cancel();
         _currentCts?.Dispose();
         _inputLock.Dispose();

@@ -45,6 +45,10 @@
   <ItemGroup Label="EF Core + SQLite">
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.4" />
   </ItemGroup>
+  <ItemGroup Label="SignalR">
+    <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.3" />
+  </ItemGroup>
+
   <ItemGroup Label="Serialisation">
     <PackageVersion Include="System.Text.Json" Version="10.0.3" />
   </ItemGroup>

@@ -31,20 +31,8 @@ public sealed class SpectreConsoleRenderer : IConsoleRenderer
 
     public void WriteBanner()
     {
-        AnsiConsole.Clear();
-        AnsiConsole.Write(
-            new FigletText("DotnetClaw")
-                .Centered()
-                .Color(Color.BlueViolet));
-
-        AnsiConsole.Markup("[orangered1]  🦀[/]");
-        AnsiConsole.MarkupLine("[bold blueviolet]  DotnetClaw - Personal AI Assistant in .NET — powered by Microsoft Semantic Kernel[/]");
-        AnsiConsole.Markup("[orangered1]  🦞[/]");
-        AnsiConsole.MarkupLine("[grey]  OpenClaw inspired agentic loop with Skills, custom Agents and Telegram bot channel[/]");
-        AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine("[grey]  Type [white]help[/] for commands, [white]exit[/] to quit, [white]reset[/] to clear context.[/]");
-        AnsiConsole.Write(new Rule().RuleStyle("grey"));
-        AnsiConsole.WriteLine();
+        // Shared ANSI banner — identical output to the Web Terminal (xterm.js understands VT100).
+        new TerminalAnsiRenderer(Console.Write).WriteBanner();
     }
 
     public void BeginAssistantTurn()

@@ -26,6 +26,10 @@
     <PackageReference Include="ModelContextProtocol" />
   </ItemGroup>
 
+  <ItemGroup Label="ASP.NET Core (WebSocket gateway hosting)">
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
   <ItemGroup Label="Microsoft Extensions">
     <PackageReference Include="Microsoft.Extensions.Configuration" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" />

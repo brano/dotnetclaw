@@ -1,10 +1,7 @@
 using DotnetClaw.Config;
 using DotnetClaw.Plugins;
-using DotnetClaw.Browser;
-using DotnetClaw.Workspace;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel;
 
 namespace DotnetClaw.Agents;

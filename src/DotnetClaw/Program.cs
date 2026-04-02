@@ -1,15 +1,17 @@
 using DotnetClaw.Agents;
 using DotnetClaw.Browser;
 using DotnetClaw.Config;
+using DotnetClaw.Gateway;
 using DotnetClaw.Hub;
 using DotnetClaw.Mcp;
 using DotnetClaw.Plugins;
 using DotnetClaw.Telegram;
 using DotnetClaw.UI;
 using DotnetClaw.Workspace;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -18,33 +20,46 @@ using Microsoft.Extensions.Options;
 //  OpenClaw-inspired agentic loop using Microsoft Semantic Kernel
 // ============================================================================
 
-var configuration = new ConfigurationBuilder()
+var builder = WebApplication.CreateSlimBuilder(args);
+
+// ── Configuration ─────────────────────────────────────────────────────────────
+builder.Configuration
     .SetBasePath(AppContext.BaseDirectory)
     .AddJsonFile("appsettings.json", optional: false)
-    .AddEnvironmentVariables()
-    .Build();
+    .AddEnvironmentVariables();
 
-// ── Dependency Injection ─────────────────────────────────────────────────────
-var services = new ServiceCollection();
-
-services.AddLogging(logging =>
+// ── Kestrel — gateway port ────────────────────────────────────────────────────
+builder.WebHost.ConfigureKestrel((ctx, options) =>
 {
-    logging.AddConsole();
-    logging.AddConfiguration(configuration.GetSection("Logging"));
+    var gatewayPort = ctx.Configuration.GetValue<int>("Gateway:Port", 5050);
+    options.ListenLocalhost(gatewayPort);
 });
 
-services
-    .Configure<DotnetClawOptions>(configuration.GetSection(DotnetClawOptions.SectionName))
+// ── Logging ───────────────────────────────────────────────────────────────────
+builder.Services.AddLogging(logging =>
+{
+    logging.AddConsole();
+    logging.AddConfiguration(builder.Configuration.GetSection("Logging"));
+});
+
+// ── DotnetClaw Options ────────────────────────────────────────────────────────
+builder.Services
+    .Configure<DotnetClawOptions>(builder.Configuration.GetSection(DotnetClawOptions.SectionName))
     .Configure<CursorOptions>(
-        configuration.GetSection($"{DotnetClawOptions.SectionName}:Cursor"))
+        builder.Configuration.GetSection($"{DotnetClawOptions.SectionName}:Cursor"))
     .Configure<TelegramOptions>(
-        configuration.GetSection($"{DotnetClawOptions.SectionName}:Telegram"))
+        builder.Configuration.GetSection($"{DotnetClawOptions.SectionName}:Telegram"))
     .Configure<BrowserOptions>(
-        configuration.GetSection($"{DotnetClawOptions.SectionName}:Browser"))
+        builder.Configuration.GetSection($"{DotnetClawOptions.SectionName}:Browser"))
     .Configure<McpOptions>(
-        configuration.GetSection($"{DotnetClawOptions.SectionName}:{McpOptions.SectionName}"))
+        builder.Configuration.GetSection($"{DotnetClawOptions.SectionName}:{McpOptions.SectionName}"))
     .Configure<HubOptions>(
-        configuration.GetSection($"{DotnetClawOptions.SectionName}:{HubOptions.SectionName}"))
+        builder.Configuration.GetSection($"{DotnetClawOptions.SectionName}:{HubOptions.SectionName}"))
+    // Gateway
+    .Configure<GatewayOptions>(builder.Configuration.GetSection(GatewayOptions.SectionName));
+
+// ── DotnetClaw Core Services ──────────────────────────────────────────────────
+builder.Services
     .AddHttpClient<HubClient>()
         .Services
     .AddSingleton<IConsoleRenderer, SpectreConsoleRenderer>()
@@ -87,22 +102,27 @@ services
     })
     .AddSingleton<ClawAgentLoop>();
 
-var provider = services.BuildServiceProvider();
+// ── SignalR Gateway ───────────────────────────────────────────────────────────
+builder.Services.AddGateway();
 
-// ── Start hosted services (Telegram polling) ──────────────────────────────────
-var hostedServices = provider.GetServices<IHostedService>();
+// ── Build ─────────────────────────────────────────────────────────────────────
+var app = builder.Build();
+
+// ── HTTP Pipeline (SignalR gateway only) ──────────────────────────────────────
+app.MapGateway();
+
+// ── Start (non-blocking so the REPL can run on the main thread) ───────────────
 using var cts = new CancellationTokenSource();
+await app.StartAsync(cts.Token);
 
-foreach (var svc in hostedServices)
-    await svc.StartAsync(cts.Token);
-
-// ── Bootstrap ────────────────────────────────────────────────────────────────
-var renderer  = provider.GetRequiredService<IConsoleRenderer>();
-var agentLoop = provider.GetRequiredService<ClawAgentLoop>();
-var workspace = provider.GetRequiredService<WorkspaceLoader>();
-var hubClient = provider.GetRequiredService<HubClient>();
-var coreOpts  = provider.GetRequiredService<IOptions<DotnetClawOptions>>().Value;
-var telegramOpts = provider.GetRequiredService<IOptions<TelegramOptions>>().Value;
+// ── Bootstrap ─────────────────────────────────────────────────────────────────
+var renderer  = app.Services.GetRequiredService<IConsoleRenderer>();
+var agentLoop = app.Services.GetRequiredService<ClawAgentLoop>();
+var workspace = app.Services.GetRequiredService<WorkspaceLoader>();
+var hubClient = app.Services.GetRequiredService<HubClient>();
+var coreOpts  = app.Services.GetRequiredService<IOptions<DotnetClawOptions>>().Value;
+var telegramOpts = app.Services.GetRequiredService<IOptions<TelegramOptions>>().Value;
+var gatewayOpts = app.Services.GetRequiredService<IOptions<GatewayOptions>>().Value;
 
 renderer.WriteBanner();
 
@@ -116,10 +136,14 @@ if (telegramOpts.Enabled && telegramOpts.IsConfigured)
 else
     renderer.WriteWarning("📱 Telegram bot disabled. Set Enabled=true in appsettings.json to activate.");
 
+// Show Gateway status
+if (gatewayOpts.Enabled)
+    renderer.WriteWarning($"🌐 SignalR Gateway listening on ws://localhost:{gatewayOpts.Port}{gatewayOpts.Path}");
+
 // Initialise agent (async — injects workspace into system prompt)
 await agentLoop.InitialiseAsync();
 
-// ── REPL ─────────────────────────────────────────────────────────────────────
+// ── REPL ──────────────────────────────────────────────────────────────────────
 Console.CancelKeyPress += (_, e) =>
 {
     e.Cancel = true;
@@ -208,12 +232,7 @@ while (!cts.IsCancellationRequested)
 
 Done:
 // ── Graceful shutdown ─────────────────────────────────────────────────────────
-foreach (var svc in hostedServices)
-{
-    try { await svc.StopAsync(CancellationToken.None); }
-    catch { /* best-effort */ }
-}
-
+await app.StopAsync(CancellationToken.None);
 Console.WriteLine("👋  Goodbye from DotnetClaw!");
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -261,7 +280,6 @@ static void PrintHelp(IConsoleRenderer r)
           Mcp_{name} → auto-imported tools from each connected MCP server
 
         Telegram Bot Commands (from Telegram)
-
         ──────────────────────────────────────
           /ask <question>    Ask DotnetClaw anything
           /plan <prompt>     Cursor plan mode (no edits)

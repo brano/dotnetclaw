@@ -1,15 +1,9 @@
-using DotnetClaw.Agents;
-using DotnetClaw.Browser;
 using DotnetClaw.Config;
 using DotnetClaw.Hub;
-using DotnetClaw.Mcp;
-using DotnetClaw.Plugins;
-using DotnetClaw.Telegram;
-using DotnetClaw.UI;
 using DotnetClaw.Web.Components;
+using DotnetClaw.Web.Gateway;
 using DotnetClaw.Web.Services;
 using DotnetClaw.Workspace;
-using Microsoft.Extensions.Options;
 
 // ============================================================================
 //  DotnetClaw.Web — Blazor Server entry point
@@ -40,63 +34,25 @@ builder.Services.AddLogging(logging =>
     logging.AddConfiguration(builder.Configuration.GetSection("Logging"));
 });
 
-// ── DotnetClaw Options ────────────────────────────────────────────────────────
+// ── Options ───────────────────────────────────────────────────────────────────
 builder.Services
     .Configure<DotnetClawOptions>(builder.Configuration.GetSection(DotnetClawOptions.SectionName))
-    .Configure<CursorOptions>(
-        builder.Configuration.GetSection($"{DotnetClawOptions.SectionName}:Cursor"))
-    .Configure<TelegramOptions>(
-        builder.Configuration.GetSection($"{DotnetClawOptions.SectionName}:Telegram"))
-    .Configure<BrowserOptions>(
-        builder.Configuration.GetSection($"{DotnetClawOptions.SectionName}:Browser"))
-    .Configure<McpOptions>(
-        builder.Configuration.GetSection($"{DotnetClawOptions.SectionName}:{McpOptions.SectionName}"))
     .Configure<HubOptions>(
-        builder.Configuration.GetSection($"{DotnetClawOptions.SectionName}:{HubOptions.SectionName}"));
+        builder.Configuration.GetSection($"{DotnetClawOptions.SectionName}:{HubOptions.SectionName}"))
+    .Configure<GatewayClientOptions>(
+        builder.Configuration.GetSection(GatewayClientOptions.SectionName));
 
-// ── DotnetClaw Core Services ──────────────────────────────────────────────────
+// ── Lightweight DotnetClaw services (no agent loop) ───────────────────────────
 builder.Services
     .AddHttpClient<HubClient>()
         .Services
-    .AddSingleton<IConsoleRenderer, SpectreConsoleRenderer>()
-    // Workspace
-    .AddSingleton<WorkspaceLoader>()
-    .AddSingleton<WorkspacePlugin>()
-    // Plugins / skills
-    .AddSingleton<ShellPlugin>()
-    .AddSingleton<FileSystemPlugin>()
-    .AddSingleton<DotnetPlugin>()
-    // Cursor CLI
-    .AddSingleton<ICursorProcessRunner, CursorProcessRunner>()
-    .AddSingleton<CursorPlugin>()
-    // Telegram Bot
-    .AddHttpClient<ITelegramBotClient, TelegramBotClient>()
-        .Services
-    .AddSingleton<TelegramCommandRouter>(sp => new TelegramCommandRouter(
-        sp.GetRequiredService<ClawAgentLoop>(),
-        sp.GetRequiredService<CursorPlugin>(),
-        sp.GetRequiredService<BrowserPlugin>(),
-        sp.GetRequiredService<IOptions<TelegramOptions>>(),
-        sp.GetRequiredService<ILogger<TelegramCommandRouter>>()))
-    .AddSingleton<TelegramPlugin>()
-    .AddHostedService<TelegramPollingService>()
-    // Browser (Playwright)
-    .AddSingleton<BrowserSessionManager>()
-    .AddHostedService(sp => sp.GetRequiredService<BrowserSessionManager>())
-    .AddSingleton<BrowserPlugin>()
-    // MCP (Model Context Protocol)
-    .AddSingleton<McpConnectionManager>()
-    .AddHostedService(sp => sp.GetRequiredService<McpConnectionManager>())
-    .AddSingleton<McpKernelLoader>()
-    .AddSingleton<McpPlugin>()
-    // Kernel
-    .AddSingleton(sp =>
-    {
-        var opts = sp.GetRequiredService<IOptions<DotnetClawOptions>>().Value;
-        var logFactory = sp.GetRequiredService<ILoggerFactory>();
-        return KernelFactory.Build(sp, opts, logFactory);
-    })
-    .AddSingleton<ClawAgentLoop>();
+    // Workspace is still needed by TerminalService for hub install / reload
+    .AddSingleton<WorkspaceLoader>();
+
+// ── WebSocket Gateway client ──────────────────────────────────────────────────
+builder.Services
+    .AddSingleton<WebGatewayClientService>()
+    .AddHostedService(sp => sp.GetRequiredService<WebGatewayClientService>());
 
 // ── Web UI Services ───────────────────────────────────────────────────────────
 builder.Services
