@@ -7,6 +7,11 @@ using DotnetClaw.Plugins;
 using DotnetClaw.Telegram;
 using DotnetClaw.UI;
 using DotnetClaw.Workspace;
+using DotnetClaw.Workflowy.Config;
+using DotnetClaw.Workflowy.Data;
+using DotnetClaw.Workflowy.Engine;
+using DotnetClaw.Workflowy.Plugin;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -78,6 +83,22 @@ services
     .AddHostedService(sp => sp.GetRequiredService<McpConnectionManager>())
     .AddSingleton<McpKernelLoader>()
     .AddSingleton<McpPlugin>()
+    // ── Workflowy Workflow Engine ─────────────────────────────────────────
+    .Configure<WorkflowyOptions>(
+        configuration.GetSection($"{DotnetClawOptions.SectionName}:{WorkflowyOptions.SectionName}"))
+    .AddDbContextFactory<WorkflowyDbContext>((sp, opts) =>
+    {
+        var o = sp.GetRequiredService<IOptions<WorkflowyOptions>>().Value;
+        Directory.CreateDirectory(Path.GetDirectoryName(o.ResolvedDatabasePath)!);
+        opts.UseSqlite($"Data Source={o.ResolvedDatabasePath}");
+    })
+    .AddSingleton<WorkflowLoader>()
+    .AddSingleton<VariableResolver>()
+    .AddSingleton<StepExecutor>()
+    .AddSingleton<PipelineDispatcher>()
+    .AddSingleton<WorkflowEngine>()
+    .AddSingleton<IApprovalNotifier, NoOpApprovalNotifier>()
+    .AddSingleton<WorkflowyPlugin>()
     // Kernel (depends on plugins being registered first)
     .AddSingleton(sp =>
     {

@@ -1,0 +1,156 @@
+@page "/tasks"
+@rendermode InteractiveServer
+@using DotnetClaw.Web.Services
+@using DotnetClaw.Workflowy.Plugin
+@inject WorkflowyApprovalService ApprovalSvc
+@implements IDisposable
+
+<PageTitle>Human Tasks — DotnetClaw</PageTitle>
+
+<div class="p-6 max-w-4xl mx-auto">
+    <div class="mb-6">
+        <h1 class="text-xl font-semibold text-[hsl(213_31%_91%)]">Human Tasks</h1>
+        <p class="text-sm text-[hsl(215.4_16.3%_50%)] mt-1">
+            Workflow approval gates waiting for your decision.
+        </p>
+    </div>
+
+    @if (_tasks.Count == 0)
+    {
+        <div class="flex flex-col items-center justify-center py-20 text-center">
+            <svg class="w-12 h-12 text-[hsl(215.4_16.3%_35%)] mb-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <p class="text-[hsl(215.4_16.3%_50%)] text-sm">No pending approvals. All clear!</p>
+        </div>
+    }
+    else
+    {
+        <div class="space-y-4">
+            @foreach (var task in _tasks)
+            {
+                var token = task.Token;
+                <div class="rounded-lg border border-[hsl(216_34%_17%)] bg-[hsl(222.2_47.4%_6%)] p-5">
+                    <!-- Header -->
+                    <div class="flex items-start justify-between gap-4 mb-3">
+                        <div>
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="text-xs font-semibold uppercase tracking-wider text-[hsl(270_90%_74%)]">
+                                    @task.WorkflowName
+                                </span>
+                                <span class="text-xs text-[hsl(215.4_16.3%_40%)]">
+                                    @task.RequestedAt.ToLocalTime().ToString("HH:mm:ss")
+                                </span>
+                            </div>
+                            <p class="text-sm font-medium text-[hsl(213_31%_91%)]">@task.Prompt</p>
+                        </div>
+                        <span class="flex-shrink-0 px-2 py-1 text-xs rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                            Awaiting approval
+                        </span>
+                    </div>
+
+                    <!-- Items -->
+                    @if (task.Items.Count > 0)
+                    {
+                        <div class="mb-4 rounded border border-[hsl(216_34%_17%)] bg-[hsl(224_71%_4%)] p-3">
+                            <ul class="space-y-1">
+                                @foreach (var item in task.Items)
+                                {
+                                    <li class="text-xs text-[hsl(215.4_16.3%_65%)] font-mono whitespace-pre-wrap">@item</li>
+                                }
+                            </ul>
+                        </div>
+                    }
+
+                    <!-- Token (collapsed) -->
+                    <div class="mb-4">
+                        <p class="text-xs text-[hsl(215.4_16.3%_35%)] font-mono truncate">Token: @task.Token</p>
+                    </div>
+
+                    <!-- Action buttons -->
+                    @if (_processingToken == token)
+                    {
+                        <div class="flex items-center gap-2 text-sm text-[hsl(215.4_16.3%_50%)]">
+                            <svg class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                            </svg>
+                            Processing…
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="flex items-center gap-3">
+                            <button @onclick="() => HandleApprovalAsync(token, true)"
+                                    class="px-4 py-2 text-sm font-medium rounded-md bg-emerald-600 hover:bg-emerald-500 text-white transition-colors">
+                                Approve
+                            </button>
+                            <button @onclick="() => HandleApprovalAsync(token, false)"
+                                    class="px-4 py-2 text-sm font-medium rounded-md bg-[hsl(216_34%_17%)] hover:bg-[hsl(216_34%_22%)] text-[hsl(215.4_16.3%_65%)] transition-colors">
+                                Reject
+                            </button>
+                        </div>
+                    }
+
+                    <!-- Result message -->
+                    @if (_resultMessages.TryGetValue(token, out var msg))
+                    {
+                        <p class="mt-2 text-xs @(msg.IsError ? "text-red-400" : "text-emerald-400")">@msg.Text</p>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private IReadOnlyList<PendingApprovalDto> _tasks = [];
+    private string? _processingToken;
+    private readonly Dictionary<string, (string Text, bool IsError)> _resultMessages = [];
+
+    protected override void OnInitialized()
+    {
+        _tasks = ApprovalSvc.PendingTasks;
+        ApprovalSvc.OnTasksChanged += OnTasksChanged;
+    }
+
+    private void OnTasksChanged()
+    {
+        InvokeAsync(() =>
+        {
+            _tasks = ApprovalSvc.PendingTasks;
+            StateHasChanged();
+        });
+    }
+
+    private async Task HandleApprovalAsync(string token, bool approved)
+    {
+        _processingToken = token;
+        StateHasChanged();
+
+        try
+        {
+            var result = await ApprovalSvc.ApproveAsync(token, approved);
+            _resultMessages[token] = result.Status == "ok"
+                ? ("Workflow completed successfully.", false)
+                : result.Status == "cancelled"
+                    ? ("Workflow cancelled.", false)
+                    : ($"Workflow {result.Status}: {result.Error}", true);
+        }
+        catch (Exception ex)
+        {
+            _resultMessages[token] = ($"Error: {ex.Message}", true);
+        }
+        finally
+        {
+            _processingToken = null;
+            _tasks = ApprovalSvc.PendingTasks;
+            StateHasChanged();
+        }
+    }
+
+    public void Dispose()
+    {
+        ApprovalSvc.OnTasksChanged -= OnTasksChanged;
+    }
+}

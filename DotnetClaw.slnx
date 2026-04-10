@@ -15,6 +15,9 @@
   <Folder Name="/tests/" Description="Automated test projects">
     <Project Path="tests/DotnetClaw.Tests/DotnetClaw.Tests.csproj" />
   </Folder>
+  <Folder Name="/plans/">
+    <File Path="plans/workflowy-plan.md" />
+  </Folder>
 
   <!-- ── Solution Items (config files visible in VS Solution Explorer) ───── -->
   <Folder Name="/Solution Items/" Description="Repo-level configuration files">
