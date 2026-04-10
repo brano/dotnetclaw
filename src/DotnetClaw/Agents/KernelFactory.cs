@@ -1,4 +1,5 @@
 using DotnetClaw.Config;
+using DotnetClaw.Jobby;
 using DotnetClaw.Plugins;
 using DotnetClaw.Browser;
 using DotnetClaw.Workspace;
@@ -70,6 +71,9 @@ public static class KernelFactory
 
         builder.Plugins.AddFromObject(
             services.GetRequiredService<McpPlugin>(), "Mcp");
+
+        builder.Plugins.AddFromObject(
+            services.GetRequiredService<JobbyPlugin>(), "Jobby");
 
         builder.Plugins.AddFromObject(
             services.GetRequiredService<WorkflowyPlugin>(), "Workflowy");

@@ -51,6 +51,9 @@
   <ItemGroup Label="Serialisation">
     <PackageVersion Include="System.Text.Json" Version="10.0.3" />
   </ItemGroup>
+  <ItemGroup Label="Scheduling">
+    <PackageVersion Include="Cronos" Version="0.8.4" />
+  </ItemGroup>
   <ItemGroup Label="Testing">
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
