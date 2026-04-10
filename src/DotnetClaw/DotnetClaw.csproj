@@ -49,6 +49,10 @@
     <PackageReference Include="System.Text.Json" />
   </ItemGroup>
 
+  <ItemGroup Label="Project References">
+    <ProjectReference Include="..\DotnetClaw.Jobby\DotnetClaw.Jobby.csproj" />
+  </ItemGroup>
+
   <!-- ── Content Files ──────────────────────────────────────────────────── -->
 
   <ItemGroup Label="Config">

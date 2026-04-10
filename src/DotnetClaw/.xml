@@ -1014,6 +1014,33 @@
         <member name="M:DotnetClaw.Hub.HubSkillInfo.#ctor(System.Int32,System.String,System.String,System.String,System.String,System.String,System.String,System.Int32,System.DateTime,System.DateTime)">
             <summary>Skill metadata returned by the DotnetClawHub search API.</summary>
         </member>
+        <member name="T:DotnetClaw.Jobby.ClawJobExecutor">
+             <summary>
+             Bridges the Jobby scheduler to <see cref="T:DotnetClaw.Agents.ClawAgentLoop"/>.
+            
+             For <c>isolated = false</c> the job shares the live conversation context.
+             For <c>isolated = true</c> (default) it creates a short-lived shadow renderer
+             so output is captured without polluting the REPL terminal, but uses the same
+             shared kernel/agent instance to avoid the overhead of a full second loop.
+             </summary>
+        </member>
+        <member name="M:DotnetClaw.Jobby.ClawJobExecutor.#ctor(DotnetClaw.Agents.ClawAgentLoop,Microsoft.Extensions.Logging.ILogger{DotnetClaw.Jobby.ClawJobExecutor})">
+             <summary>
+             Bridges the Jobby scheduler to <see cref="T:DotnetClaw.Agents.ClawAgentLoop"/>.
+            
+             For <c>isolated = false</c> the job shares the live conversation context.
+             For <c>isolated = true</c> (default) it creates a short-lived shadow renderer
+             so output is captured without polluting the REPL terminal, but uses the same
+             shared kernel/agent instance to avoid the overhead of a full second loop.
+             </summary>
+        </member>
+        <member name="T:DotnetClaw.Jobby.StringCapturingRenderer">
+            <summary>
+            No-op <see cref="T:DotnetClaw.UI.IConsoleRenderer"/> that captures streamed chunks into a string.
+            Used when a background job runs in isolated mode so its output doesn't
+            appear in the REPL terminal.
+            </summary>
+        </member>
         <member name="T:DotnetClaw.Mcp.IMcpClient">
             <summary>
             Abstraction over a connected MCP server session, exposing only the operations

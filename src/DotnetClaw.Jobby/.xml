@@ -1,0 +1,141 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>DotnetClaw.Jobby</name>
+    </assembly>
+    <members>
+        <member name="T:DotnetClaw.Jobby.CronService">
+             <summary>
+             Background service that drives the job scheduler.
+            
+             Design:
+               • Polls the <see cref="T:DotnetClaw.Jobby.CronStore"/> every <see cref="F:DotnetClaw.Jobby.CronService.TickInterval"/> (30 s)
+               • For each enabled job whose <c>NextRunAt</c> ≤ UTC now it:
+                   1. Calls <see cref="M:DotnetClaw.Jobby.IJobExecutor.ExecuteAsync(System.String,System.Boolean,System.Threading.CancellationToken)"/> with the job prompt
+                   2. Records <c>LastRunAt</c> and a trimmed <c>LastResult</c>
+                   3. For recurring jobs: advances <c>NextRunAt</c> using the CRON expression
+                   4. For one-shot jobs: disables the job so it never fires again
+               • Jobs are executed sequentially per tick (fire-and-forget across ticks)
+             </summary>
+        </member>
+        <member name="M:DotnetClaw.Jobby.CronService.#ctor(DotnetClaw.Jobby.CronStore,DotnetClaw.Jobby.IJobExecutor,Microsoft.Extensions.Logging.ILogger{DotnetClaw.Jobby.CronService})">
+             <summary>
+             Background service that drives the job scheduler.
+            
+             Design:
+               • Polls the <see cref="T:DotnetClaw.Jobby.CronStore"/> every <see cref="F:DotnetClaw.Jobby.CronService.TickInterval"/> (30 s)
+               • For each enabled job whose <c>NextRunAt</c> ≤ UTC now it:
+                   1. Calls <see cref="M:DotnetClaw.Jobby.IJobExecutor.ExecuteAsync(System.String,System.Boolean,System.Threading.CancellationToken)"/> with the job prompt
+                   2. Records <c>LastRunAt</c> and a trimmed <c>LastResult</c>
+                   3. For recurring jobs: advances <c>NextRunAt</c> using the CRON expression
+                   4. For one-shot jobs: disables the job so it never fires again
+               • Jobs are executed sequentially per tick (fire-and-forget across ticks)
+             </summary>
+        </member>
+        <member name="M:DotnetClaw.Jobby.CronService.ComputeNextRun(System.String,System.DateTimeOffset)">
+            <summary>
+            Compute the next UTC run time after <paramref name="after"/> using Cronos.
+            Returns null if the expression never fires again.
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.Jobby.CronStore">
+             <summary>
+             Reads and writes the job list from/to a JSON file under
+             <c>~/.dotnetclaw/cron/jobs.json</c>.
+            
+             Thread-safety: all public methods are async and serialise access with a
+             <see cref="T:System.Threading.SemaphoreSlim"/> so the CronService and plugin can both write safely.
+             </summary>
+        </member>
+        <member name="M:DotnetClaw.Jobby.CronStore.#ctor(Microsoft.Extensions.Logging.ILogger{DotnetClaw.Jobby.CronStore})">
+             <summary>
+             Reads and writes the job list from/to a JSON file under
+             <c>~/.dotnetclaw/cron/jobs.json</c>.
+            
+             Thread-safety: all public methods are async and serialise access with a
+             <see cref="T:System.Threading.SemaphoreSlim"/> so the CronService and plugin can both write safely.
+             </summary>
+        </member>
+        <member name="T:DotnetClaw.Jobby.IJobExecutor">
+            <summary>
+            Abstraction over the agent loop so Jobby stays decoupled from the
+            concrete <c>ClawAgentLoop</c> implementation.
+            Implemented by <c>ClawJobExecutor</c> in the host project.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Jobby.IJobExecutor.ExecuteAsync(System.String,System.Boolean,System.Threading.CancellationToken)">
+            <summary>
+            Execute <paramref name="prompt"/> through the agent and return its text response.
+            </summary>
+            <param name="prompt">The user message / task to run.</param>
+            <param name="isolated">
+            When true a temporary session is created so the job does not pollute
+            the main conversation history.
+            </param>
+            <param name="ct">Cancellation token.</param>
+        </member>
+        <member name="T:DotnetClaw.Jobby.JobbyPlugin">
+             <summary>
+             Semantic Kernel plugin that lets the agent manage background jobs.
+            
+             The agent can call these functions in response to natural-language requests like:
+               "send me a summary of my calendar every morning at 8:00"
+               → schedule_job(name, "summarise my calendar", "0 8 * * *")
+            
+             Natural language schedules are converted to CRON expressions by the LLM
+             before passing them to <see cref="M:DotnetClaw.Jobby.JobbyPlugin.ScheduleJobAsync(System.String,System.String,System.String,System.Boolean,System.Threading.CancellationToken)"/>.
+             </summary>
+        </member>
+        <member name="M:DotnetClaw.Jobby.JobbyPlugin.#ctor(DotnetClaw.Jobby.CronStore,DotnetClaw.Jobby.IJobExecutor,Microsoft.Extensions.Logging.ILogger{DotnetClaw.Jobby.JobbyPlugin})">
+             <summary>
+             Semantic Kernel plugin that lets the agent manage background jobs.
+            
+             The agent can call these functions in response to natural-language requests like:
+               "send me a summary of my calendar every morning at 8:00"
+               → schedule_job(name, "summarise my calendar", "0 8 * * *")
+            
+             Natural language schedules are converted to CRON expressions by the LLM
+             before passing them to <see cref="M:DotnetClaw.Jobby.JobbyPlugin.ScheduleJobAsync(System.String,System.String,System.String,System.Boolean,System.Threading.CancellationToken)"/>.
+             </summary>
+        </member>
+        <member name="T:DotnetClaw.Jobby.Models.JobRecord">
+            <summary>
+            Persisted representation of a scheduled background job.
+            Stored as JSON under ~/.dotnetclaw/cron/jobs.json
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Jobby.Models.JobRecord.Id">
+            <summary>Short random ID, e.g. "a3f7b2c1".</summary>
+        </member>
+        <member name="P:DotnetClaw.Jobby.Models.JobRecord.Name">
+            <summary>Human-friendly label shown in listings.</summary>
+        </member>
+        <member name="P:DotnetClaw.Jobby.Models.JobRecord.Prompt">
+            <summary>The prompt that will be sent to the agent when this job fires.</summary>
+        </member>
+        <member name="P:DotnetClaw.Jobby.Models.JobRecord.Type">
+            <summary>Recurring (CRON expression) or OneShot (absolute run time).</summary>
+        </member>
+        <member name="P:DotnetClaw.Jobby.Models.JobRecord.CronExpression">
+            <summary>
+            Standard 5-part CRON expression for recurring jobs (e.g. "0 8 * * *").
+            Null for OneShot jobs.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Jobby.Models.JobRecord.RunAt">
+            <summary>UTC time to execute a one-shot job. Null for recurring jobs.</summary>
+        </member>
+        <member name="P:DotnetClaw.Jobby.Models.JobRecord.IsolatedSession">
+            <summary>
+            When true the job executes in its own isolated agent session (fresh context).
+            When false it runs in the shared main session.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Jobby.Models.JobRecord.NextRunAt">
+            <summary>Pre-computed UTC time of the next scheduled execution.</summary>
+        </member>
+        <member name="P:DotnetClaw.Jobby.Models.JobRecord.LastResult">
+            <summary>Trimmed first 500 chars of the agent's response from the last run.</summary>
+        </member>
+    </members>
+</doc>
