@@ -41,6 +41,10 @@
     <PackageReference Include="Spectre.Console" />
   </ItemGroup>
 
+  <ItemGroup Label="Workflowy Workflow Engine">
+    <ProjectReference Include="..\DotnetClaw.Workflowy\DotnetClaw.Workflowy.csproj" />
+  </ItemGroup>
+
   <ItemGroup Label="Browser Automation">
     <PackageReference Include="Microsoft.Playwright" />
   </ItemGroup>
