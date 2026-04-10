@@ -11,10 +11,6 @@
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
   </PropertyGroup>
 
-  <ItemGroup Label="SignalR Client">
-    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" />
-  </ItemGroup>
-
   <ItemGroup Label="Project References">
     <ProjectReference Include="..\DotnetClaw\DotnetClaw.csproj" />
   </ItemGroup>

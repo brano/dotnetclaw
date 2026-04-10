@@ -1,36 +1,40 @@
 using System.Collections.Concurrent;
+using System.Net.WebSockets;
+using System.Text;
+using System.Text.Json;
 using DotnetClaw.Gateway;
-using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Options;
 
 namespace DotnetClaw.Web.Gateway;
 
 // ============================================================================
-//  WebGatewayClientService — singleton SignalR client for the CLI gateway
+//  WebGatewayClientService — singleton WebSocket client for the CLI gateway
 // ============================================================================
 
 /// <summary>
-/// Singleton hosted service that maintains a SignalR connection to the DotnetClaw
-/// CLI gateway (ws://localhost:5050/ws by default).
+/// Singleton hosted service that maintains a raw WebSocket connection to the
+/// DotnetClaw CLI gateway (ws://localhost:5050/ws by default).
 ///
 /// Architecture:
-///   • One shared <see cref="HubConnection"/> for the entire Blazor server process.
+///   • One shared <see cref="ClientWebSocket"/> for the entire Blazor server process.
 ///   • Per-session subscribers: Blazor components subscribe with a unique sessionId
 ///     and receive only messages whose sessionId matches theirs.
-///   • <see cref="HubConnectionBuilder.WithAutomaticReconnect"/> handles reconnection.
+///   • Automatic reconnection with configurable delay on connection loss.
 /// </summary>
 public sealed class WebGatewayClientService : IHostedService, IAsyncDisposable
 {
     private readonly GatewayClientOptions _options;
     private readonly ILogger<WebGatewayClientService> _logger;
 
-    private HubConnection? _connection;
+    private ClientWebSocket? _socket;
+    private CancellationTokenSource? _cts;
+    private Task? _runTask;
 
     // sessionId → subscriber callback
     private readonly ConcurrentDictionary<string, Func<GatewayMessage, Task>> _subscribers = new();
 
-    /// <summary>Whether the SignalR connection is currently active.</summary>
-    public bool IsConnected => _connection?.State == HubConnectionState.Connected;
+    /// <summary>Whether the WebSocket connection is currently active.</summary>
+    public bool IsConnected => _socket?.State == WebSocketState.Open;
 
     public WebGatewayClientService(
         IOptions<GatewayClientOptions> options,
@@ -42,40 +46,32 @@ public sealed class WebGatewayClientService : IHostedService, IAsyncDisposable
 
     // ── IHostedService ────────────────────────────────────────────────────────
 
-    public async Task StartAsync(CancellationToken cancellationToken)
+    public Task StartAsync(CancellationToken cancellationToken)
     {
-        var url = $"{_options.ServerUrl}?channel={_options.Channel}";
-
-        _connection = new HubConnectionBuilder()
-            .WithUrl(url)
-            .WithAutomaticReconnect()
-            .Build();
-
-        RegisterHandlers(_connection);
-
-        _connection.Reconnecting += ex =>
-        {
-            _logger.LogWarning("WebGatewayClient: reconnecting… ({Reason})", ex?.Message);
-            return Task.CompletedTask;
-        };
-        _connection.Reconnected += _ =>
-        {
-            _logger.LogInformation("WebGatewayClient: reconnected");
-            return Task.CompletedTask;
-        };
-        _connection.Closed += ex =>
-        {
-            _logger.LogWarning("WebGatewayClient: connection closed ({Reason})", ex?.Message);
-            return Task.CompletedTask;
-        };
-
-        await ConnectWithRetryAsync(cancellationToken);
+        _cts = new CancellationTokenSource();
+        _runTask = RunAsync(_cts.Token);
+        return Task.CompletedTask;
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
-        if (_connection is not null)
-            await _connection.StopAsync(cancellationToken);
+        _cts?.Cancel();
+
+        if (_socket?.State == WebSocketState.Open)
+        {
+            try
+            {
+                await _socket.CloseAsync(
+                    WebSocketCloseStatus.NormalClosure, "Stopping", cancellationToken);
+            }
+            catch { /* best effort */ }
+        }
+
+        if (_runTask is not null)
+        {
+            try { await _runTask; }
+            catch { /* swallow cancellation */ }
+        }
     }
 
     // ── Subscription API ─────────────────────────────────────────────────────
@@ -95,36 +91,96 @@ public sealed class WebGatewayClientService : IHostedService, IAsyncDisposable
 
     /// <summary>Sends a chat message to the gateway for the given session.</summary>
     public Task SendChatMessageAsync(string text, string sessionId, CancellationToken ct = default)
-        => InvokeAsync("SendChatMessage", ct, sessionId, text);
+        => SendAsync(new GatewayMessage
+        {
+            Type = MessageType.ChatMessage, SessionId = sessionId, Text = text
+        }, ct);
 
     /// <summary>Asks the CLI to reset the agent conversation for <paramref name="sessionId"/>.</summary>
     public Task SendResetAsync(string sessionId, CancellationToken ct = default)
-        => InvokeAsync("ResetSession", ct, sessionId);
+        => SendAsync(new GatewayMessage
+        {
+            Type = MessageType.ResetSession, SessionId = sessionId
+        }, ct);
 
     // ── Internal ──────────────────────────────────────────────────────────────
 
-    private void RegisterHandlers(HubConnection conn)
+    /// <summary>
+    /// Main loop: connect → receive → reconnect. Runs in the background until cancelled.
+    /// </summary>
+    private async Task RunAsync(CancellationToken ct)
     {
-        conn.On<string, string>("ReceiveChunk", (sessionId, text) =>
-            Dispatch(new GatewayMessage { Type = MessageType.AgentChunk, SessionId = sessionId, Text = text }));
+        while (!ct.IsCancellationRequested)
+        {
+            try
+            {
+                _socket?.Dispose();
+                _socket = new ClientWebSocket();
 
-        conn.On<string, string>("ReceiveAgentResponse", (sessionId, text) =>
-            Dispatch(new GatewayMessage { Type = MessageType.AgentResponse, SessionId = sessionId, Text = text }));
+                var url = $"{_options.ServerUrl}?channel={_options.Channel}";
+                await _socket.ConnectAsync(new Uri(url), ct);
+                _logger.LogInformation("WebGatewayClient: connected to {Url}", _options.ServerUrl);
 
-        conn.On<string, string, string>("ReceiveToolCall", (sessionId, tool, input) =>
-            Dispatch(new GatewayMessage { Type = MessageType.ToolCall, SessionId = sessionId, Tool = tool, Input = input }));
+                await ReceiveLoopAsync(ct);
 
-        conn.On<string, string, string>("ReceiveToolResult", (sessionId, tool, result) =>
-            Dispatch(new GatewayMessage { Type = MessageType.ToolResult, SessionId = sessionId, Tool = tool, Text = result }));
+                if (!ct.IsCancellationRequested)
+                    _logger.LogWarning("WebGatewayClient: connection lost, reconnecting…");
+            }
+            catch (OperationCanceledException) { break; }
+            catch (Exception ex) when (!ct.IsCancellationRequested)
+            {
+                _logger.LogWarning(ex,
+                    "WebGatewayClient: connect failed, retrying in {Delay}s",
+                    _options.ReconnectDelaySeconds);
+            }
 
-        conn.On<string, string>("ReceiveError", (sessionId, message) =>
-            Dispatch(new GatewayMessage { Type = MessageType.Error, SessionId = sessionId, Text = message }));
-
-        conn.On<string>("OnSessionReset", sessionId =>
-            Dispatch(new GatewayMessage { Type = MessageType.ResetSession, SessionId = sessionId }));
+            if (!ct.IsCancellationRequested)
+            {
+                try { await Task.Delay(TimeSpan.FromSeconds(_options.ReconnectDelaySeconds), ct); }
+                catch (OperationCanceledException) { break; }
+            }
+        }
     }
 
-    private Task Dispatch(GatewayMessage msg)
+    private async Task ReceiveLoopAsync(CancellationToken ct)
+    {
+        var buffer = new byte[4096];
+
+        while (_socket?.State == WebSocketState.Open && !ct.IsCancellationRequested)
+        {
+            try
+            {
+                using var ms = new MemoryStream();
+                WebSocketReceiveResult result;
+
+                do
+                {
+                    result = await _socket.ReceiveAsync(buffer, ct);
+                    if (result.MessageType == WebSocketMessageType.Close)
+                        return;
+                    ms.Write(buffer, 0, result.Count);
+                } while (!result.EndOfMessage);
+
+                if (result.MessageType != WebSocketMessageType.Text)
+                    continue;
+
+                var json = Encoding.UTF8.GetString(ms.ToArray());
+                var message = JsonSerializer.Deserialize(json, GatewayJsonContext.Default.GatewayMessage);
+
+                if (message is not null)
+                    await DispatchAsync(message);
+            }
+            catch (OperationCanceledException) { break; }
+            catch (WebSocketException) { break; }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "WebGatewayClient: receive error");
+                break;
+            }
+        }
+    }
+
+    private Task DispatchAsync(GatewayMessage msg)
     {
         if (msg.SessionId is not null && _subscribers.TryGetValue(msg.SessionId, out var handler))
         {
@@ -137,47 +193,28 @@ public sealed class WebGatewayClientService : IHostedService, IAsyncDisposable
         return Task.CompletedTask;
     }
 
-    private async Task InvokeAsync(string method, CancellationToken ct, params object[] args)
+    private async Task SendAsync(GatewayMessage message, CancellationToken ct)
     {
-        if (_connection?.State != HubConnectionState.Connected)
+        if (_socket?.State != WebSocketState.Open)
         {
-            _logger.LogWarning("WebGatewayClient: cannot invoke '{Method}' — not connected", method);
+            _logger.LogWarning("WebGatewayClient: cannot send — not connected");
             return;
         }
         try
         {
-            await _connection.InvokeCoreAsync(method, args, ct);
+            var json = JsonSerializer.SerializeToUtf8Bytes(message, GatewayJsonContext.Default.GatewayMessage);
+            await _socket.SendAsync(json, WebSocketMessageType.Text, endOfMessage: true, ct);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "WebGatewayClient: invoke '{Method}' failed", method);
-        }
-    }
-
-    private async Task ConnectWithRetryAsync(CancellationToken ct)
-    {
-        while (!ct.IsCancellationRequested)
-        {
-            try
-            {
-                await _connection!.StartAsync(ct);
-                _logger.LogInformation("WebGatewayClient: connected to {Url}", _options.ServerUrl);
-                return;
-            }
-            catch (Exception ex) when (!ct.IsCancellationRequested)
-            {
-                _logger.LogWarning(ex,
-                    "WebGatewayClient: initial connect failed, retrying in {Delay}s",
-                    _options.ReconnectDelaySeconds);
-                try { await Task.Delay(TimeSpan.FromSeconds(_options.ReconnectDelaySeconds), ct); }
-                catch (OperationCanceledException) { break; }
-            }
+            _logger.LogWarning(ex, "WebGatewayClient: send failed");
         }
     }
 
     public async ValueTask DisposeAsync()
     {
-        if (_connection is not null)
-            await _connection.DisposeAsync();
+        _cts?.Cancel();
+        _cts?.Dispose();
+        _socket?.Dispose();
     }
 }

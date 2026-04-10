@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Routing;
-using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -8,18 +7,19 @@ using Microsoft.Extensions.Options;
 namespace DotnetClaw.Gateway;
 
 // ============================================================================
-//  GatewayExtensions — SignalR hub registration helpers
+//  GatewayExtensions — WebSocket gateway registration helpers
 // ============================================================================
 
 public static class GatewayExtensions
 {
     /// <summary>
-    /// Registers SignalR and the <see cref="GatewayHub"/> with the DI container.
+    /// Registers WebSocket gateway services with the DI container.
     /// Call this from <c>Program.cs</c> before <c>builder.Build()</c>.
     /// </summary>
     public static IServiceCollection AddGateway(this IServiceCollection services)
     {
-        services.AddSignalR();
+        services.AddSingleton<GatewayConnectionManager>();
+        services.AddSingleton<GatewayWebSocketHandler>();
         services
             .AddSingleton<TelegramGatewayAdapter>()
             .AddHostedService(sp => sp.GetRequiredService<TelegramGatewayAdapter>());
@@ -27,13 +27,14 @@ public static class GatewayExtensions
     }
 
     /// <summary>
-    /// Maps the <see cref="GatewayHub"/> at the path defined in <see cref="GatewayOptions"/>.
+    /// Enables WebSockets and maps the gateway endpoint at the path defined
+    /// in <see cref="GatewayOptions"/>.
     /// Call this after <c>builder.Build()</c>.
     /// </summary>
-    public static IEndpointRouteBuilder MapGateway(this IEndpointRouteBuilder app)
+    public static WebApplication MapGateway(this WebApplication app)
     {
-        var options = app.ServiceProvider.GetRequiredService<IOptions<GatewayOptions>>().Value;
-        var log     = app.ServiceProvider
+        var options = app.Services.GetRequiredService<IOptions<GatewayOptions>>().Value;
+        var log     = app.Services
             .GetRequiredService<ILoggerFactory>()
             .CreateLogger(typeof(GatewayExtensions).FullName!);
 
@@ -43,9 +44,13 @@ public static class GatewayExtensions
             return app;
         }
 
-        app.MapHub<GatewayHub>(options.Path);
+        app.UseWebSockets();
+
+        var handler = app.Services.GetRequiredService<GatewayWebSocketHandler>();
+        app.Map(options.Path, (HttpContext context) => handler.HandleAsync(context));
+
         log.LogInformation(
-            "SignalR Gateway mapped at '{Path}' on port {Port}",
+            "WebSocket Gateway mapped at '{Path}' on port {Port}",
             options.Path, options.Port);
 
         return app;

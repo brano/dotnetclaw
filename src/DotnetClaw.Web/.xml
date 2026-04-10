@@ -22,18 +22,18 @@
         </member>
         <member name="T:DotnetClaw.Web.Gateway.WebGatewayClientService">
              <summary>
-             Singleton hosted service that maintains a SignalR connection to the DotnetClaw
-             CLI gateway (ws://localhost:5050/ws by default).
+             Singleton hosted service that maintains a raw WebSocket connection to the
+             DotnetClaw CLI gateway (ws://localhost:5050/ws by default).
             
              Architecture:
-               • One shared <see cref="T:Microsoft.AspNetCore.SignalR.Client.HubConnection"/> for the entire Blazor server process.
+               • One shared <see cref="T:System.Net.WebSockets.ClientWebSocket"/> for the entire Blazor server process.
                • Per-session subscribers: Blazor components subscribe with a unique sessionId
                  and receive only messages whose sessionId matches theirs.
-               • <see cref="!:HubConnectionBuilder.WithAutomaticReconnect"/> handles reconnection.
+               • Automatic reconnection with configurable delay on connection loss.
              </summary>
         </member>
         <member name="P:DotnetClaw.Web.Gateway.WebGatewayClientService.IsConnected">
-            <summary>Whether the SignalR connection is currently active.</summary>
+            <summary>Whether the WebSocket connection is currently active.</summary>
         </member>
         <member name="M:DotnetClaw.Web.Gateway.WebGatewayClientService.Subscribe(System.String,System.Func{DotnetClaw.Gateway.GatewayMessage,System.Threading.Tasks.Task})">
             <summary>
@@ -49,6 +49,11 @@
         </member>
         <member name="M:DotnetClaw.Web.Gateway.WebGatewayClientService.SendResetAsync(System.String,System.Threading.CancellationToken)">
             <summary>Asks the CLI to reset the agent conversation for <paramref name="sessionId"/>.</summary>
+        </member>
+        <member name="M:DotnetClaw.Web.Gateway.WebGatewayClientService.RunAsync(System.Threading.CancellationToken)">
+            <summary>
+            Main loop: connect → receive → reconnect. Runs in the background until cancelled.
+            </summary>
         </member>
         <member name="P:DotnetClaw.Web.Services.AgentBridgeService.EffectiveSystemPrompt">
             <summary>System prompt is owned by the CLI; this stub keeps the Home page working.</summary>

@@ -1,33 +1,36 @@
+using System.Text.Json.Serialization;
+
 namespace DotnetClaw.Gateway;
 
 // ============================================================================
-//  MessageType — well-known type discriminator constants
-//  (used by WebGatewayClientService for subscriber routing)
+//  MessageType — well-known type discriminator constants for the wire protocol
 // ============================================================================
 
 /// <summary>
-/// Well-known message-type identifiers shared between the server and the
-/// <c>WebGatewayClientService</c> subscriber routing logic.
+/// Well-known message-type identifiers for the WebSocket gateway wire protocol.
+/// Used in both directions (client ↔ server).
 /// </summary>
 public static class MessageType
 {
-    public const string AgentChunk     = "agent_chunk";
-    public const string AgentResponse  = "agent_response";
-    public const string ToolCall       = "tool_call";
-    public const string ToolResult     = "tool_result";
-    public const string Error          = "error";
-    public const string ResetSession   = "reset_session";
+    // Server → Client
+    public const string AgentChunk    = "agent_chunk";
+    public const string AgentResponse = "agent_response";
+    public const string ToolCall      = "tool_call";
+    public const string ToolResult    = "tool_result";
+    public const string Error         = "error";
+    public const string ResetSession  = "reset_session";
+
+    // Client → Server
+    public const string ChatMessage   = "chat_message";
 }
 
 // ============================================================================
-//  GatewayMessage — internal envelope used by WebGatewayClientService
-//  to route SignalR callbacks to per-session Blazor subscribers
+//  GatewayMessage — unified JSON envelope for the WebSocket wire protocol
 // ============================================================================
 
 /// <summary>
-/// Internal event envelope passed from <c>WebGatewayClientService</c> to
-/// per-session subscribers (AgentBridgeService, TerminalService).
-/// Not serialised over the wire — SignalR handles that via strongly-typed methods.
+/// Unified message envelope serialised as JSON in both directions (client ↔ server).
+/// Replaces SignalR's strongly-typed hub methods with an explicit wire protocol.
 /// </summary>
 public sealed class GatewayMessage
 {
@@ -37,3 +40,13 @@ public sealed class GatewayMessage
     public string? Tool      { get; init; }
     public string? Input     { get; init; }
 }
+
+// ============================================================================
+//  GatewayJsonContext — System.Text.Json source generator for AOT + perf
+// ============================================================================
+
+[JsonSerializable(typeof(GatewayMessage))]
+[JsonSourceGenerationOptions(
+    PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
+    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
+public partial class GatewayJsonContext : JsonSerializerContext;

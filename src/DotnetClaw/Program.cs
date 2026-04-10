@@ -102,13 +102,13 @@ builder.Services
     })
     .AddSingleton<ClawAgentLoop>();
 
-// ── SignalR Gateway ───────────────────────────────────────────────────────────
+// ── WebSocket Gateway ────────────────────────────────────────────────────────
 builder.Services.AddGateway();
 
 // ── Build ─────────────────────────────────────────────────────────────────────
 var app = builder.Build();
 
-// ── HTTP Pipeline (SignalR gateway only) ──────────────────────────────────────
+// ── HTTP Pipeline (WebSocket gateway only) ───────────────────────────────────
 app.MapGateway();
 
 // ── Start (non-blocking so the REPL can run on the main thread) ───────────────
@@ -138,7 +138,7 @@ else
 
 // Show Gateway status
 if (gatewayOpts.Enabled)
-    renderer.WriteWarning($"🌐 SignalR Gateway listening on ws://localhost:{gatewayOpts.Port}{gatewayOpts.Path}");
+    renderer.WriteWarning($"🌐 WebSocket Gateway listening on ws://localhost:{gatewayOpts.Port}{gatewayOpts.Path}");
 
 // Initialise agent (async — injects workspace into system prompt)
 await agentLoop.InitialiseAsync();
