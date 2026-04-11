@@ -6,6 +6,7 @@
 
   <!-- ── Source Projects ─────────────────────────────────────────────────── -->
   <Folder Name="/src/" Description="Application source code">
+    <Project Path="src/DotnetClaw.Jobby/DotnetClaw.Jobby.csproj" />
     <Project Path="src/DotnetClaw.Web/DotnetClaw.Web.csproj" />
     <Project Path="src/DotnetClaw.Workflowy/DotnetClaw.Workflowy.csproj" />
     <Project Path="src/DotnetClaw/DotnetClaw.csproj" />

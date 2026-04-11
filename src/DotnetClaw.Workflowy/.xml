@@ -1,0 +1,296 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>DotnetClaw.Workflowy</name>
+    </assembly>
+    <members>
+        <member name="T:DotnetClaw.Workflowy.Config.WorkflowyOptions">
+            <summary>
+            Configuration for DotnetClaw.Workflowy.
+            Bound from the <c>Workflowy</c> section (standalone) or <c>DotnetClaw:Workflowy</c>
+            section (when embedded in DotnetClaw).
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Workflowy.Config.WorkflowyOptions.DatabasePath">
+            <summary>Path to the SQLite database file. ~ is expanded to the user's home directory.</summary>
+        </member>
+        <member name="P:DotnetClaw.Workflowy.Config.WorkflowyOptions.StepOutputCaptureLimitBytes">
+            <summary>Maximum bytes captured per step for stdout and stderr individually. Default 32 KB.</summary>
+        </member>
+        <member name="P:DotnetClaw.Workflowy.Config.WorkflowyOptions.DefaultStepTimeoutSeconds">
+            <summary>Default step timeout in seconds.</summary>
+        </member>
+        <member name="P:DotnetClaw.Workflowy.Config.WorkflowyOptions.MaxStepTimeoutSeconds">
+            <summary>Maximum allowed step timeout in seconds.</summary>
+        </member>
+        <member name="P:DotnetClaw.Workflowy.Config.WorkflowyOptions.ShellExecutable">
+            <summary>Override the shell executable for run: steps (e.g. "bash"). Defaults to platform shell.</summary>
+        </member>
+        <member name="P:DotnetClaw.Workflowy.Config.WorkflowyOptions.ShellArgPrefix">
+            <summary>Argument prefix for the shell (e.g. "-c "). Defaults to platform default.</summary>
+        </member>
+        <member name="P:DotnetClaw.Workflowy.Config.WorkflowyOptions.ResolvedDatabasePath">
+            <summary>Resolved absolute path to the database file (expands ~).</summary>
+        </member>
+        <member name="T:DotnetClaw.Workflowy.Engine.PipelineDispatcher">
+             <summary>
+             Handles pipeline: directives in workflow steps.
+             Each directive is in the form "verb.noun [--flag value ...]".
+            
+             Supported directives:
+               llm.invoke --prompt "..."   — invokes an LLM (stub in standalone mode)
+             </summary>
+        </member>
+        <member name="M:DotnetClaw.Workflowy.Engine.PipelineDispatcher.#ctor(Microsoft.Extensions.Logging.ILogger{DotnetClaw.Workflowy.Engine.PipelineDispatcher})">
+             <summary>
+             Handles pipeline: directives in workflow steps.
+             Each directive is in the form "verb.noun [--flag value ...]".
+            
+             Supported directives:
+               llm.invoke --prompt "..."   — invokes an LLM (stub in standalone mode)
+             </summary>
+        </member>
+        <member name="T:DotnetClaw.Workflowy.Engine.StepExecutor">
+            <summary>
+            Executes a single workflow step (run: / command: type).
+            Pipeline and approval steps are handled by WorkflowEngine and PipelineDispatcher respectively.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Workflowy.Engine.StepExecutor.#ctor(Microsoft.Extensions.Options.IOptions{DotnetClaw.Workflowy.Config.WorkflowyOptions},DotnetClaw.Workflowy.Engine.VariableResolver,Microsoft.Extensions.Logging.ILogger{DotnetClaw.Workflowy.Engine.StepExecutor})">
+            <summary>
+            Executes a single workflow step (run: / command: type).
+            Pipeline and approval steps are handled by WorkflowEngine and PipelineDispatcher respectively.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Workflowy.Engine.StepExecutor.ExecuteAsync(DotnetClaw.Workflowy.Models.WorkflowStep,System.Int32,System.Collections.Generic.IReadOnlyDictionary{System.String,System.String},System.Threading.CancellationToken)">
+            <summary>
+            Executes a run: step. Resolves variables, launches the shell command, captures output.
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.Workflowy.Engine.VariableResolver">
+             <summary>
+             Resolves {{variable}} tokens in workflow step templates.
+            
+             Variable namespaces:
+               {{args.name}}        — argument supplied at run-time
+               {{env.VAR_NAME}}     — environment variable declared in the workflow's env: block
+               {{stepname.stdout}}  — stdout from a completed named step
+               {{stepname.stderr}}  — stderr from a completed named step
+               {{stepname.exitCode}} — exit code from a completed named step
+               {{stepname.success}} — "true"/"false" based on exit code
+            
+             Unknown tokens are left unchanged to avoid accidental data loss.
+             </summary>
+        </member>
+        <member name="M:DotnetClaw.Workflowy.Engine.VariableResolver.Resolve(System.String,System.Collections.Generic.IReadOnlyDictionary{System.String,System.String})">
+            <summary>Substitutes all {{token}} placeholders in <paramref name="template"/> from <paramref name="context"/>.</summary>
+        </member>
+        <member name="M:DotnetClaw.Workflowy.Engine.VariableResolver.BuildInitialContext(DotnetClaw.Workflowy.Models.WorkflowFile,System.Collections.Generic.IReadOnlyDictionary{System.String,System.String})">
+            <summary>Builds the initial interpolation context from workflow env and supplied args.</summary>
+        </member>
+        <member name="M:DotnetClaw.Workflowy.Engine.VariableResolver.AddStepOutputs(System.Collections.Generic.Dictionary{System.String,System.String},System.String,DotnetClaw.Workflowy.Models.StepResult)">
+            <summary>Adds step output entries to context after a step completes.</summary>
+        </member>
+        <member name="M:DotnetClaw.Workflowy.Engine.VariableResolver.EvaluateCondition(System.String,System.Collections.Generic.IReadOnlyDictionary{System.String,System.String})">
+            <summary>
+            Evaluates a condition expression after resolving variables.
+            Supports: "{{token}} == value", "{{token}} != value", "true/false/yes/no/1/0".
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.Workflowy.Engine.WorkflowEngine">
+            <summary>
+            Orchestrates workflow execution: loads the file, runs steps sequentially,
+            handles approval gates (pause/resume), and persists all state to SQLite.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Workflowy.Engine.WorkflowEngine.#ctor(Microsoft.EntityFrameworkCore.IDbContextFactory{DotnetClaw.Workflowy.Data.WorkflowyDbContext},DotnetClaw.Workflowy.Engine.WorkflowLoader,DotnetClaw.Workflowy.Engine.StepExecutor,DotnetClaw.Workflowy.Engine.PipelineDispatcher,DotnetClaw.Workflowy.Engine.VariableResolver,Microsoft.Extensions.Logging.ILogger{DotnetClaw.Workflowy.Engine.WorkflowEngine})">
+            <summary>
+            Orchestrates workflow execution: loads the file, runs steps sequentially,
+            handles approval gates (pause/resume), and persists all state to SQLite.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Workflowy.Engine.WorkflowEngine.GenerateToken">
+            <summary>Generates a URL-safe base64-encoded GUID as a compact, opaque resume token.</summary>
+        </member>
+        <member name="M:DotnetClaw.Workflowy.Engine.WorkflowEngine.RunAsync(System.String,System.Collections.Generic.Dictionary{System.String,System.String},System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Starts a new workflow run from a file path and returns a response envelope.
+            The response status is "ok", "needs_approval", or "error".
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Workflowy.Engine.WorkflowEngine.ResumeAsync(System.String,System.Boolean,System.Threading.CancellationToken)">
+            <summary>
+            Resumes a workflow run that is awaiting human approval.
+            Pass <paramref name="approved"/>=true to continue, false to cancel.
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.Workflowy.Engine.WorkflowLoader">
+            <summary>
+            Loads and validates workflow files from YAML (.yaml/.yml) or JSON (.json) format.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Workflowy.Engine.WorkflowLoader.Load(System.String)">
+            <summary>Loads and parses a workflow file from <paramref name="path"/>.</summary>
+        </member>
+        <member name="M:DotnetClaw.Workflowy.Engine.WorkflowLoader.LoadFromString(System.String,System.String)">
+            <summary>Parses a workflow from a string. <paramref name="format"/> is "yaml" or "json".</summary>
+        </member>
+        <member name="M:DotnetClaw.Workflowy.Engine.WorkflowLoader.Validate(DotnetClaw.Workflowy.Models.WorkflowFile)">
+            <summary>Returns a list of validation errors. Empty list means valid.</summary>
+        </member>
+        <member name="T:DotnetClaw.Workflowy.Models.StepResult">
+            <summary>Persisted record of a single step execution within a workflow run.</summary>
+        </member>
+        <member name="P:DotnetClaw.Workflowy.Models.StepResult.StepType">
+            <summary>Step type: "run", "pipeline", "approval", "skipped".</summary>
+        </member>
+        <member name="P:DotnetClaw.Workflowy.Models.StepResult.Stdout">
+            <summary>Captured stdout (capped at WorkflowyOptions.StepOutputCaptureLimitBytes).</summary>
+        </member>
+        <member name="P:DotnetClaw.Workflowy.Models.StepResult.Stderr">
+            <summary>Captured stderr (capped at WorkflowyOptions.StepOutputCaptureLimitBytes).</summary>
+        </member>
+        <member name="P:DotnetClaw.Workflowy.Models.StepResult.WasTruncated">
+            <summary>True if output was truncated due to the capture limit.</summary>
+        </member>
+        <member name="T:DotnetClaw.Workflowy.Models.WorkflowFile">
+            <summary>A parsed workflow definition loaded from a YAML or JSON file.</summary>
+        </member>
+        <member name="P:DotnetClaw.Workflowy.Models.WorkflowFile.Args">
+            <summary>Named arguments declared by this workflow (e.g. ["mailbox", "limit"]).</summary>
+        </member>
+        <member name="P:DotnetClaw.Workflowy.Models.WorkflowFile.Env">
+            <summary>Environment variables merged into the interpolation context as env.*.</summary>
+        </member>
+        <member name="P:DotnetClaw.Workflowy.Models.WorkflowFile.Steps">
+            <summary>Ordered list of steps to execute.</summary>
+        </member>
+        <member name="T:DotnetClaw.Workflowy.Models.WorkflowStep">
+            <summary>A single workflow step. Exactly one of Run/Command, Pipeline, or Approval must be set.</summary>
+        </member>
+        <member name="P:DotnetClaw.Workflowy.Models.WorkflowStep.Name">
+            <summary>Optional step name used for variable references: {{stepname.stdout}}.</summary>
+        </member>
+        <member name="P:DotnetClaw.Workflowy.Models.WorkflowStep.Condition">
+            <summary>Condition expression. If false, step is skipped. Supports {{token}} == value comparisons.</summary>
+        </member>
+        <member name="P:DotnetClaw.Workflowy.Models.WorkflowStep.Run">
+            <summary>Shell command to execute. Supports {{variable}} interpolation.</summary>
+        </member>
+        <member name="P:DotnetClaw.Workflowy.Models.WorkflowStep.Command">
+            <summary>Synonym for Run (either field is accepted in YAML/JSON).</summary>
+        </member>
+        <member name="P:DotnetClaw.Workflowy.Models.WorkflowStep.Pipeline">
+            <summary>Native Workflowy pipeline directive (e.g. "llm.invoke --prompt '...'").</summary>
+        </member>
+        <member name="P:DotnetClaw.Workflowy.Models.WorkflowStep.Approval">
+            <summary>Human approval gate. Pauses the workflow and requires explicit approval to continue.</summary>
+        </member>
+        <member name="P:DotnetClaw.Workflowy.Models.WorkflowStep.EffectiveRun">
+            <summary>Returns the effective shell command (Run takes precedence over Command).</summary>
+        </member>
+        <member name="T:DotnetClaw.Workflowy.Models.ApprovalBlock">
+            <summary>Configuration for a human approval gate step.</summary>
+        </member>
+        <member name="P:DotnetClaw.Workflowy.Models.ApprovalBlock.Prompt">
+            <summary>Question or description shown to the human approver.</summary>
+        </member>
+        <member name="P:DotnetClaw.Workflowy.Models.ApprovalBlock.Items">
+            <summary>List of items (e.g. previews) to show alongside the prompt.</summary>
+        </member>
+        <member name="T:DotnetClaw.Workflowy.Models.WorkflowRun">
+            <summary>Persisted record of a single workflow execution instance.</summary>
+        </member>
+        <member name="P:DotnetClaw.Workflowy.Models.WorkflowRun.ArgsJson">
+            <summary>Serialized Dictionary&lt;string,string&gt; of args supplied at invocation.</summary>
+        </member>
+        <member name="P:DotnetClaw.Workflowy.Models.WorkflowRun.NextStepIndex">
+            <summary>Index of the next step to execute. Used as resume pointer.</summary>
+        </member>
+        <member name="P:DotnetClaw.Workflowy.Models.WorkflowRun.ContextJson">
+            <summary>Serialized interpolation context (accumulated step outputs, args, env).</summary>
+        </member>
+        <member name="P:DotnetClaw.Workflowy.Models.WorkflowRun.ResumeToken">
+            <summary>Opaque URL-safe base64 GUID resume token. Set when Status=NeedsApproval.</summary>
+        </member>
+        <member name="P:DotnetClaw.Workflowy.Models.WorkflowRun.PendingApprovalJson">
+            <summary>Serialized PendingApprovalDto. Set when Status=NeedsApproval.</summary>
+        </member>
+        <member name="T:DotnetClaw.Workflowy.Plugin.IApprovalNotifier">
+             <summary>
+             Hook for notifying external surfaces (e.g. Web UI) when a workflow pauses for approval
+             or resumes after an approval decision.
+            
+             In DotnetClaw CLI: registered as <see cref="T:DotnetClaw.Workflowy.Plugin.NoOpApprovalNotifier"/> (does nothing).
+             In DotnetClaw.Web: registered as <c>WorkflowyApprovalService</c> which updates the /tasks UI.
+             </summary>
+        </member>
+        <member name="T:DotnetClaw.Workflowy.Plugin.NoOpApprovalNotifier">
+            <summary>No-op implementation used in the CLI where no web UI notification is needed.</summary>
+        </member>
+        <member name="T:DotnetClaw.Workflowy.Plugin.WorkflowyPlugin">
+             <summary>
+             Semantic Kernel plugin that exposes Workflowy workflow execution to the DotnetClaw agent.
+            
+             Tool call protocol:
+               run_workflow    — {"action":"run","pipeline":"/path/to.yaml --arg val","timeoutMs":30000}
+               resume_workflow — {"action":"resume","token":"&lt;token&gt;","approve":true}
+            
+             Both functions return a serialized WorkflowyResponse JSON envelope.
+             </summary>
+        </member>
+        <member name="M:DotnetClaw.Workflowy.Plugin.WorkflowyPlugin.#ctor(DotnetClaw.Workflowy.Engine.WorkflowEngine,DotnetClaw.Workflowy.Plugin.IApprovalNotifier,Microsoft.Extensions.Logging.ILogger{DotnetClaw.Workflowy.Plugin.WorkflowyPlugin})">
+             <summary>
+             Semantic Kernel plugin that exposes Workflowy workflow execution to the DotnetClaw agent.
+            
+             Tool call protocol:
+               run_workflow    — {"action":"run","pipeline":"/path/to.yaml --arg val","timeoutMs":30000}
+               resume_workflow — {"action":"resume","token":"&lt;token&gt;","approve":true}
+            
+             Both functions return a serialized WorkflowyResponse JSON envelope.
+             </summary>
+        </member>
+        <member name="M:DotnetClaw.Workflowy.Plugin.WorkflowyPlugin.ParsePipelineString(System.String)">
+            <summary>
+            Parses a pipeline string into a workflow path and key-value args.
+            Format: "/path/to/workflow.yaml --key1 value1 --key2 value2"
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.Workflowy.Plugin.WorkflowyRequest">
+            <summary>Inbound tool call JSON sent by the DotnetClaw agent.</summary>
+        </member>
+        <member name="P:DotnetClaw.Workflowy.Plugin.WorkflowyRequest.Action">
+            <summary>"run" or "resume".</summary>
+        </member>
+        <member name="P:DotnetClaw.Workflowy.Plugin.WorkflowyRequest.Pipeline">
+            <summary>For action=run: "/path/to/workflow.yaml --arg1 value1".</summary>
+        </member>
+        <member name="P:DotnetClaw.Workflowy.Plugin.WorkflowyRequest.TimeoutMs">
+            <summary>For action=run: timeout in milliseconds. Default 30000.</summary>
+        </member>
+        <member name="P:DotnetClaw.Workflowy.Plugin.WorkflowyRequest.Token">
+            <summary>For action=resume: the resume token from a prior needs_approval response.</summary>
+        </member>
+        <member name="P:DotnetClaw.Workflowy.Plugin.WorkflowyRequest.Approve">
+            <summary>For action=resume: true to approve, false to reject.</summary>
+        </member>
+        <member name="T:DotnetClaw.Workflowy.Plugin.WorkflowyResponse">
+            <summary>
+            Outbound JSON envelope returned by Workflowy tool calls.
+            Status values: "ok" | "needs_approval" | "cancelled" | "error"
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Workflowy.Plugin.WorkflowyResponse.#ctor(System.Boolean,System.String)">
+            <summary>
+            Outbound JSON envelope returned by Workflowy tool calls.
+            Status values: "ok" | "needs_approval" | "cancelled" | "error"
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.Workflowy.Plugin.PendingApprovalDto">
+            <summary>DTO shared between WorkflowyPlugin and WorkflowyApprovalService to describe a pending approval.</summary>
+        </member>
+        <member name="M:DotnetClaw.Workflowy.Plugin.PendingApprovalDto.#ctor(System.String,System.String,System.String,System.Collections.Generic.IReadOnlyList{System.String},System.DateTimeOffset)">
+            <summary>DTO shared between WorkflowyPlugin and WorkflowyApprovalService to describe a pending approval.</summary>
+        </member>
+    </members>
+</doc>

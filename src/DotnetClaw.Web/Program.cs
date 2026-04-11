@@ -59,38 +59,9 @@ builder.Services
 builder.Services
     .AddSingleton<WebGatewayClientService>()
     .AddHostedService(sp => sp.GetRequiredService<WebGatewayClientService>());
-    .AddSingleton<IConsoleRenderer, SpectreConsoleRenderer>()
-    // Workspace
-    .AddSingleton<WorkspaceLoader>()
-    .AddSingleton<WorkspacePlugin>()
-    // Plugins / skills
-    .AddSingleton<ShellPlugin>()
-    .AddSingleton<FileSystemPlugin>()
-    .AddSingleton<DotnetPlugin>()
-    // Cursor CLI
-    .AddSingleton<ICursorProcessRunner, CursorProcessRunner>()
-    .AddSingleton<CursorPlugin>()
-    // Telegram Bot
-    .AddHttpClient<ITelegramBotClient, TelegramBotClient>()
-        .Services
-    .AddSingleton<TelegramCommandRouter>(sp => new TelegramCommandRouter(
-        sp.GetRequiredService<ClawAgentLoop>(),
-        sp.GetRequiredService<CursorPlugin>(),
-        sp.GetRequiredService<BrowserPlugin>(),
-        sp.GetRequiredService<IOptions<TelegramOptions>>(),
-        sp.GetRequiredService<ILogger<TelegramCommandRouter>>()))
-    .AddSingleton<TelegramPlugin>()
-    .AddHostedService<TelegramPollingService>()
-    // Browser (Playwright)
-    .AddSingleton<BrowserSessionManager>()
-    .AddHostedService(sp => sp.GetRequiredService<BrowserSessionManager>())
-    .AddSingleton<BrowserPlugin>()
-    // MCP (Model Context Protocol)
-    .AddSingleton<McpConnectionManager>()
-    .AddHostedService(sp => sp.GetRequiredService<McpConnectionManager>())
-    .AddSingleton<McpKernelLoader>()
-    .AddSingleton<McpPlugin>()
-    // ── Workflowy Workflow Engine ─────────────────────────────────────────
+
+// ── Workflowy Workflow Engine (approval UI) ──────────────────────────────────
+builder.Services
     .Configure<WorkflowyOptions>(
         builder.Configuration.GetSection($"{DotnetClawOptions.SectionName}:{WorkflowyOptions.SectionName}"))
     .AddDbContextFactory<WorkflowyDbContext>((sp, opts) =>
@@ -106,15 +77,7 @@ builder.Services
     .AddSingleton<WorkflowEngine>()
     .AddSingleton<WorkflowyApprovalService>()
     .AddSingleton<IApprovalNotifier>(sp => sp.GetRequiredService<WorkflowyApprovalService>())
-    .AddSingleton<WorkflowyPlugin>()
-    // Kernel
-    .AddSingleton(sp =>
-    {
-        var opts = sp.GetRequiredService<IOptions<DotnetClawOptions>>().Value;
-        var logFactory = sp.GetRequiredService<ILoggerFactory>();
-        return KernelFactory.Build(sp, opts, logFactory);
-    })
-    .AddSingleton<ClawAgentLoop>();
+    .AddSingleton<WorkflowyPlugin>();
 
 // ── Web UI Services ───────────────────────────────────────────────────────────
 builder.Services

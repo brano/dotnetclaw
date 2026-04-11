@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>DotnetClaw.Workflowy.Tests</name>
+    </assembly>
+    <members>
+        <member name="T:DotnetClaw.Workflowy.Tests.WorkflowEngineTests">
+            <summary>
+            Integration tests for WorkflowEngine using a real SQLite DB in a temp file.
+            </summary>
+        </member>
+    </members>
+</doc>

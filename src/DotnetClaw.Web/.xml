@@ -90,6 +90,34 @@
         <member name="M:DotnetClaw.Web.Services.TerminalService.CancelCurrent">
             <summary>Cancel the currently executing command (triggered by Ctrl+C).</summary>
         </member>
+        <member name="T:DotnetClaw.Web.Services.WorkflowyApprovalService">
+            <summary>
+            Singleton service that:
+             - Implements <see cref="T:DotnetClaw.Workflowy.Plugin.IApprovalNotifier"/> so WorkflowyPlugin can push approval events into the web UI.
+             - Maintains the in-memory list of pending human tasks.
+             - Exposes <see cref="M:DotnetClaw.Web.Services.WorkflowyApprovalService.ApproveAsync(System.String,System.Boolean,System.Threading.CancellationToken)"/> so the /tasks page can approve or reject without going through the agent.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Web.Services.WorkflowyApprovalService.#ctor(DotnetClaw.Workflowy.Engine.WorkflowEngine,Microsoft.Extensions.Logging.ILogger{DotnetClaw.Web.Services.WorkflowyApprovalService})">
+            <summary>
+            Singleton service that:
+             - Implements <see cref="T:DotnetClaw.Workflowy.Plugin.IApprovalNotifier"/> so WorkflowyPlugin can push approval events into the web UI.
+             - Maintains the in-memory list of pending human tasks.
+             - Exposes <see cref="M:DotnetClaw.Web.Services.WorkflowyApprovalService.ApproveAsync(System.String,System.Boolean,System.Threading.CancellationToken)"/> so the /tasks page can approve or reject without going through the agent.
+            </summary>
+        </member>
+        <member name="E:DotnetClaw.Web.Services.WorkflowyApprovalService.OnTasksChanged">
+            <summary>Fired whenever the pending task list changes (added or removed).</summary>
+        </member>
+        <member name="P:DotnetClaw.Web.Services.WorkflowyApprovalService.PendingTasks">
+            <summary>Snapshot of all currently pending approval requests.</summary>
+        </member>
+        <member name="M:DotnetClaw.Web.Services.WorkflowyApprovalService.ApproveAsync(System.String,System.Boolean,System.Threading.CancellationToken)">
+            <summary>
+            Called by the Tasks page when the user clicks Approve or Reject.
+            Resumes the workflow engine directly and removes the task from the pending list.
+            </summary>
+        </member>
         <member name="M:DotnetClaw.Web.Components.Pages.Terminal.HandleInputLine(System.String)">
             <summary>Called by xterm.js when the user presses Enter.</summary>
         </member>

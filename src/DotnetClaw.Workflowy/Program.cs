@@ -24,11 +24,7 @@ if (args.Length == 0 || args[0] is "--help" or "-h" or "help")
 }
 
 var builder = Host.CreateApplicationBuilder(args);
-builder.Services.AddLogging(l =>
-{
-    l.AddConsole();
-    l.AddConfiguration(builder.Configuration.GetSection("Logging"));
-});
+// Console logging + "Logging" config section are set up by CreateApplicationBuilder
 
 builder.Services
     .Configure<WorkflowyOptions>(builder.Configuration.GetSection(WorkflowyOptions.SectionName))

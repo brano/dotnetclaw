@@ -101,7 +101,7 @@ builder.Services
     .AddSingleton<McpPlugin>()
     // ── Workflowy Workflow Engine ─────────────────────────────────────────
     .Configure<WorkflowyOptions>(
-        configuration.GetSection($"{DotnetClawOptions.SectionName}:{WorkflowyOptions.SectionName}"))
+        builder.Configuration.GetSection($"{DotnetClawOptions.SectionName}:{WorkflowyOptions.SectionName}"))
     .AddDbContextFactory<WorkflowyDbContext>((sp, opts) =>
     {
         var o = sp.GetRequiredService<IOptions<WorkflowyOptions>>().Value;
@@ -123,12 +123,6 @@ builder.Services
         return KernelFactory.Build(sp, opts, logFactory);
     })
     .AddSingleton<ClawAgentLoop>();
-
-// ── WebSocket Gateway ────────────────────────────────────────────────────────
-builder.Services.AddGateway();
-
-// ── Build ─────────────────────────────────────────────────────────────────────
-var app = builder.Build();
 
 // ── WebSocket Gateway ────────────────────────────────────────────────────────
 builder.Services.AddGateway();
@@ -238,7 +232,7 @@ while (!cts.IsCancellationRequested)
         case "cron":
         case "cron list":
         case "jobs":
-            var cronStore = provider.GetRequiredService<DotnetClaw.Jobby.CronStore>();
+            var cronStore = app.Services.GetRequiredService<DotnetClaw.Jobby.CronStore>();
             var jobList = await cronStore.LoadAllAsync(cts.Token);
             if (jobList.Count == 0)
                 renderer.WriteWarning("No scheduled jobs. Ask the agent to schedule one.");

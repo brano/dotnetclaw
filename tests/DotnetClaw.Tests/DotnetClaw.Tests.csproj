@@ -9,6 +9,8 @@
     <AssemblyName>DotnetClaw.Tests</AssemblyName>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <!-- Disable .NET 10 package pruning — test projects have complex dependency graphs -->
+    <NuGetPrunePackageReferences>false</NuGetPrunePackageReferences>
   </PropertyGroup>
 
   <PropertyGroup Label="Test Behaviour">
