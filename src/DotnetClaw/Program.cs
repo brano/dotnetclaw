@@ -115,6 +115,12 @@ builder.Services
     .AddSingleton<WorkflowEngine>()
     .AddSingleton<IApprovalNotifier, NoOpApprovalNotifier>()
     .AddSingleton<WorkflowyPlugin>()
+    // ── Jobby (background job scheduler) ─────────────────────────────────────
+    .AddSingleton<CronStore>()
+    .AddSingleton<IJobExecutor, ClawJobExecutor>()
+    .AddSingleton<JobbyPlugin>()
+    .AddSingleton<CronService>()
+    .AddHostedService(sp => sp.GetRequiredService<CronService>())
     // Kernel (depends on plugins being registered first)
     .AddSingleton(sp =>
     {
@@ -232,7 +238,7 @@ while (!cts.IsCancellationRequested)
         case "cron":
         case "cron list":
         case "jobs":
-            var cronStore = app.Services.GetRequiredService<DotnetClaw.Jobby.CronStore>();
+            var cronStore = app.Services.GetRequiredService<CronStore>();
             var jobList = await cronStore.LoadAllAsync(cts.Token);
             if (jobList.Count == 0)
                 renderer.WriteWarning("No scheduled jobs. Ask the agent to schedule one.");
