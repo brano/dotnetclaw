@@ -7,6 +7,7 @@
   <!-- ── Source Projects ─────────────────────────────────────────────────── -->
   <Folder Name="/src/" Description="Application source code">
     <Project Path="src/DotnetClaw.Web/DotnetClaw.Web.csproj" />
+    <Project Path="src/DotnetClaw.Workflowy/DotnetClaw.Workflowy.csproj" />
     <Project Path="src/DotnetClaw/DotnetClaw.csproj" />
     <Project Path="src/DotnetClawHub/DotnetClawHub.csproj" />
   </Folder>
@@ -14,6 +15,9 @@
   <!-- ── Test Projects ───────────────────────────────────────────────────── -->
   <Folder Name="/tests/" Description="Automated test projects">
     <Project Path="tests/DotnetClaw.Tests/DotnetClaw.Tests.csproj" />
+  </Folder>
+  <Folder Name="/plans/">
+    <File Path="plans/workflowy-plan.md" />
   </Folder>
 
   <!-- ── Solution Items (config files visible in VS Solution Explorer) ───── -->

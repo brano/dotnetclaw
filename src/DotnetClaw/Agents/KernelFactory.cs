@@ -1,5 +1,9 @@
 using DotnetClaw.Config;
+using DotnetClaw.Jobby;
 using DotnetClaw.Plugins;
+using DotnetClaw.Browser;
+using DotnetClaw.Workspace;
+using DotnetClaw.Workflowy.Plugin;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
@@ -66,6 +70,12 @@ public static class KernelFactory
 
         builder.Plugins.AddFromObject(
             services.GetRequiredService<McpPlugin>(), "Mcp");
+
+        builder.Plugins.AddFromObject(
+            services.GetRequiredService<JobbyPlugin>(), "Jobby");
+
+        builder.Plugins.AddFromObject(
+            services.GetRequiredService<WorkflowyPlugin>(), "Workflowy");
 
         // NOTE: Mcp_{serverName} plugins from live MCP servers are loaded later by
         // McpKernelLoader.LoadAsync(), called from ClawAgentLoop.InitialiseAsync().

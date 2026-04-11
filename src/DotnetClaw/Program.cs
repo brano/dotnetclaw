@@ -3,6 +3,7 @@ using DotnetClaw.Browser;
 using DotnetClaw.Config;
 using DotnetClaw.Gateway;
 using DotnetClaw.Hub;
+using DotnetClaw.Jobby;
 using DotnetClaw.Mcp;
 using DotnetClaw.Plugins;
 using DotnetClaw.Telegram;
@@ -10,6 +11,11 @@ using DotnetClaw.UI;
 using DotnetClaw.Workspace;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using DotnetClaw.Workflowy.Config;
+using DotnetClaw.Workflowy.Data;
+using DotnetClaw.Workflowy.Engine;
+using DotnetClaw.Workflowy.Plugin;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -93,6 +99,22 @@ builder.Services
     .AddHostedService(sp => sp.GetRequiredService<McpConnectionManager>())
     .AddSingleton<McpKernelLoader>()
     .AddSingleton<McpPlugin>()
+    // ── Workflowy Workflow Engine ─────────────────────────────────────────
+    .Configure<WorkflowyOptions>(
+        configuration.GetSection($"{DotnetClawOptions.SectionName}:{WorkflowyOptions.SectionName}"))
+    .AddDbContextFactory<WorkflowyDbContext>((sp, opts) =>
+    {
+        var o = sp.GetRequiredService<IOptions<WorkflowyOptions>>().Value;
+        Directory.CreateDirectory(Path.GetDirectoryName(o.ResolvedDatabasePath)!);
+        opts.UseSqlite($"Data Source={o.ResolvedDatabasePath}");
+    })
+    .AddSingleton<WorkflowLoader>()
+    .AddSingleton<VariableResolver>()
+    .AddSingleton<StepExecutor>()
+    .AddSingleton<PipelineDispatcher>()
+    .AddSingleton<WorkflowEngine>()
+    .AddSingleton<IApprovalNotifier, NoOpApprovalNotifier>()
+    .AddSingleton<WorkflowyPlugin>()
     // Kernel (depends on plugins being registered first)
     .AddSingleton(sp =>
     {
@@ -101,6 +123,12 @@ builder.Services
         return KernelFactory.Build(sp, opts, logFactory);
     })
     .AddSingleton<ClawAgentLoop>();
+
+// ── WebSocket Gateway ────────────────────────────────────────────────────────
+builder.Services.AddGateway();
+
+// ── Build ─────────────────────────────────────────────────────────────────────
+var app = builder.Build();
 
 // ── WebSocket Gateway ────────────────────────────────────────────────────────
 builder.Services.AddGateway();
@@ -206,6 +234,21 @@ while (!cts.IsCancellationRequested)
         case "help":
             PrintHelp(renderer);
             continue;
+
+        case "cron":
+        case "cron list":
+        case "jobs":
+            var cronStore = provider.GetRequiredService<DotnetClaw.Jobby.CronStore>();
+            var jobList = await cronStore.LoadAllAsync(cts.Token);
+            if (jobList.Count == 0)
+                renderer.WriteWarning("No scheduled jobs. Ask the agent to schedule one.");
+            else
+            {
+                renderer.WriteWarning($"{jobList.Count} scheduled job(s):");
+                foreach (var j in jobList)
+                    Console.WriteLine($"  [{(j.Enabled ? "ON " : "OFF")}] {j.Id}  {j.Name,-30}  {(j.Type == DotnetClaw.Jobby.Models.JobType.Recurring ? j.CronExpression : j.RunAt?.ToString("u"))}  next={j.NextRunAt?.ToString("u") ?? "—"}");
+            }
+            continue;
     }
 
     // ── Hub commands (hub, hub search, hub install, hub list) ─────────────
@@ -249,6 +292,11 @@ static void PrintHelp(IConsoleRenderer r)
           ws reload         Force reload workspace documents from disk
           exit              Quit DotnetClaw
 
+        Jobby Commands (Background Job Scheduler)
+        ──────────────────────────────────────────
+          cron / jobs       List all scheduled background jobs
+          (use the agent to schedule, delete, or run jobs)
+
         DotnetClawHub Commands
         ──────────────────────
           hub               Show hub help
@@ -278,6 +326,8 @@ static void PrintHelp(IConsoleRenderer r)
           Mcp        → mcp_list_servers, mcp_list_tools, mcp_call_tool,
                        mcp_reconnect, mcp_list_resources, mcp_read_resource
           Mcp_{name} → auto-imported tools from each connected MCP server
+          Jobby      → schedule_job, schedule_once, list_jobs, get_job,
+                       delete_job, enable_job, disable_job, run_job_now
 
         Telegram Bot Commands (from Telegram)
         ──────────────────────────────────────

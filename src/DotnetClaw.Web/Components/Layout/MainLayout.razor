@@ -1,5 +1,6 @@
 @inherits LayoutComponentBase
 @inject AppState AppState
+@inject DotnetClaw.Web.Services.WorkflowyApprovalService ApprovalSvc
 @implements IDisposable
 
 <div class="flex h-screen overflow-hidden bg-[hsl(224_71%_4%)]">
@@ -53,6 +54,19 @@
                 @if (AppState.AgentRunning)
                 {
                     <span class="ml-auto flex h-2 w-2 rounded-full bg-[hsl(220_100%_54%)] animate-pulse"></span>
+                }
+            </NavLink>
+
+            <NavLink href="/tasks" class="nav-item" ActiveClass="nav-link-active">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+                </svg>
+                Tasks
+                @if (ApprovalSvc.PendingTasks.Count > 0)
+                {
+                    <span class="ml-auto flex items-center justify-center min-w-[1.25rem] h-5 rounded-full bg-amber-500 text-[10px] font-bold text-black px-1">
+                        @ApprovalSvc.PendingTasks.Count
+                    </span>
                 }
             </NavLink>
 
@@ -118,10 +132,12 @@
     protected override void OnInitialized()
     {
         AppState.OnChange += StateHasChanged;
+        ApprovalSvc.OnTasksChanged += StateHasChanged;
     }
 
     public void Dispose()
     {
         AppState.OnChange -= StateHasChanged;
+        ApprovalSvc.OnTasksChanged -= StateHasChanged;
     }
 }

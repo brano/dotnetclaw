@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       DotnetClaw.Jobby — Background Job Scheduler
+       CronService as IHostedService with CRON + one-shot scheduling.
+       Jobs persisted as JSON under ~/.dotnetclaw/cron/
+       ═══════════════════════════════════════════════════════════════════════ -->
+
+  <PropertyGroup Label="Library">
+    <OutputType>Library</OutputType>
+    <RootNamespace>DotnetClaw.Jobby</RootNamespace>
+    <AssemblyName>DotnetClaw.Jobby</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup Label="Semantic Kernel">
+    <PackageReference Include="Microsoft.SemanticKernel" />
+  </ItemGroup>
+
+  <ItemGroup Label="Microsoft Extensions">
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Options" />
+  </ItemGroup>
+
+  <ItemGroup Label="Scheduling">
+    <PackageReference Include="Cronos" />
+  </ItemGroup>
+
+  <ItemGroup Label="Serialisation">
+    <PackageReference Include="System.Text.Json" />
+  </ItemGroup>
+
+</Project>
