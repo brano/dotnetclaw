@@ -18,7 +18,7 @@ namespace DotnetClaw.Jobby;
 /// before passing them to <see cref="ScheduleJobAsync"/>.
 /// </summary>
 public sealed class JobbyPlugin(
-    CronStore store,
+    ICronStore store,
     IJobExecutor executor,
     ILogger<JobbyPlugin> logger)
 {

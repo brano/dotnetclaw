@@ -124,10 +124,5 @@
         <member name="M:DotnetClaw.Web.Components.Pages.Terminal.CancelInput">
             <summary>Called by xterm.js when the user presses Ctrl+C.</summary>
         </member>
-        <member name="T:Program">
-            <summary>
-            Auto-generated public partial Program class for top-level statement apps.
-            </summary>
-        </member>
     </members>
 </doc>

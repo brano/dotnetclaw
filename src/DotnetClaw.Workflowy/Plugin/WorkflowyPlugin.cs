@@ -16,7 +16,7 @@ namespace DotnetClaw.Workflowy.Plugin;
 /// Both functions return a serialized WorkflowyResponse JSON envelope.
 /// </summary>
 public sealed class WorkflowyPlugin(
-    WorkflowEngine engine,
+    IWorkflowEngine engine,
     IApprovalNotifier notifier,
     ILogger<WorkflowyPlugin> logger)
 {

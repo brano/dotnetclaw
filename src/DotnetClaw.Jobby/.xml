@@ -18,7 +18,7 @@
                • Jobs are executed sequentially per tick (fire-and-forget across ticks)
              </summary>
         </member>
-        <member name="M:DotnetClaw.Jobby.CronService.#ctor(DotnetClaw.Jobby.CronStore,DotnetClaw.Jobby.IJobExecutor,Microsoft.Extensions.Logging.ILogger{DotnetClaw.Jobby.CronService})">
+        <member name="M:DotnetClaw.Jobby.CronService.#ctor(DotnetClaw.Jobby.ICronStore,DotnetClaw.Jobby.IJobExecutor,Microsoft.Extensions.Logging.ILogger{DotnetClaw.Jobby.CronService})">
              <summary>
              Background service that drives the job scheduler.
             
@@ -41,20 +41,26 @@
         <member name="T:DotnetClaw.Jobby.CronStore">
              <summary>
              Reads and writes the job list from/to a JSON file under
-             <c>~/.dotnetclaw/cron/jobs.json</c>.
+             <c>~/.dotnetclaw/cron/jobs.json</c> (or a custom directory for tests).
             
              Thread-safety: all public methods are async and serialise access with a
              <see cref="T:System.Threading.SemaphoreSlim"/> so the CronService and plugin can both write safely.
              </summary>
         </member>
         <member name="M:DotnetClaw.Jobby.CronStore.#ctor(Microsoft.Extensions.Logging.ILogger{DotnetClaw.Jobby.CronStore})">
-             <summary>
-             Reads and writes the job list from/to a JSON file under
-             <c>~/.dotnetclaw/cron/jobs.json</c>.
-            
-             Thread-safety: all public methods are async and serialise access with a
-             <see cref="T:System.Threading.SemaphoreSlim"/> so the CronService and plugin can both write safely.
-             </summary>
+            <summary>Production constructor — uses <c>~/.dotnetclaw/cron/</c>.</summary>
+        </member>
+        <member name="M:DotnetClaw.Jobby.CronStore.#ctor(Microsoft.Extensions.Logging.ILogger{DotnetClaw.Jobby.CronStore},System.String)">
+            <summary>
+            Test constructor — uses <paramref name="storeBaseDir"/> so tests can
+            write to a temp directory instead of the real user profile.
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.Jobby.ICronStore">
+            <summary>
+            Abstraction over <see cref="T:DotnetClaw.Jobby.CronStore"/> to enable unit testing without
+            touching the real filesystem (Moq cannot mock sealed classes).
+            </summary>
         </member>
         <member name="T:DotnetClaw.Jobby.IJobExecutor">
             <summary>
@@ -86,7 +92,7 @@
              before passing them to <see cref="M:DotnetClaw.Jobby.JobbyPlugin.ScheduleJobAsync(System.String,System.String,System.String,System.Boolean,System.Threading.CancellationToken)"/>.
              </summary>
         </member>
-        <member name="M:DotnetClaw.Jobby.JobbyPlugin.#ctor(DotnetClaw.Jobby.CronStore,DotnetClaw.Jobby.IJobExecutor,Microsoft.Extensions.Logging.ILogger{DotnetClaw.Jobby.JobbyPlugin})">
+        <member name="M:DotnetClaw.Jobby.JobbyPlugin.#ctor(DotnetClaw.Jobby.ICronStore,DotnetClaw.Jobby.IJobExecutor,Microsoft.Extensions.Logging.ILogger{DotnetClaw.Jobby.JobbyPlugin})">
              <summary>
              Semantic Kernel plugin that lets the agent manage background jobs.
             

@@ -25,9 +25,7 @@ public class BrowserPluginTests
         BrowserOptions? browserOpts = null,
         TelegramOptions? telegramOpts = null)
     {
-        var mgr = new Mock<BrowserSessionManager>(
-            Options.Create(browserOpts ?? DefaultBrowserOptions()),
-            NullLogger<BrowserSessionManager>.Instance);
+        var mgr = new Mock<IBrowserSessionManager>();
 
         mgr.Setup(m => m.GetSessionAsync(It.IsAny<CancellationToken>()))
            .ReturnsAsync(session);

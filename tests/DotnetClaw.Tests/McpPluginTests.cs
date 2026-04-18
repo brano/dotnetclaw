@@ -23,16 +23,12 @@ public class McpPluginTests
     // ── Fixtures ──────────────────────────────────────────────────────────────
 
     private static McpPlugin CreatePlugin(
-        Mock<McpConnectionManager>? managerMock = null,
+        Mock<IMcpConnectionManager>? managerMock = null,
         McpOptions? opts = null)
     {
-        var manager = managerMock ?? new Mock<McpConnectionManager>(
-            Options.Create(new McpOptions()),
-            NullLogger<McpConnectionManager>.Instance);
+        var manager = managerMock ?? new Mock<IMcpConnectionManager>();
 
-        var kernelLoader = new Mock<McpKernelLoader>(
-            manager.Object,
-            NullLogger<McpKernelLoader>.Instance);
+        var kernelLoader = new Mock<IMcpKernelLoader>();
 
         return new McpPlugin(
             manager.Object,
@@ -66,9 +62,7 @@ public class McpPluginTests
     [Fact]
     public void ListServers_NoServers_ReturnsNotConfiguredMessage()
     {
-        var mgr = new Mock<McpConnectionManager>(
-            Options.Create(new McpOptions()),
-            NullLogger<McpConnectionManager>.Instance);
+        var mgr = new Mock<IMcpConnectionManager>();
         mgr.Setup(m => m.GetStatuses()).Returns([]);
 
         var plugin = CreatePlugin(mgr);
@@ -80,9 +74,7 @@ public class McpPluginTests
     [Fact]
     public void ListServers_MixedStatus_ShowsBothConnectedAndFailed()
     {
-        var mgr = new Mock<McpConnectionManager>(
-            Options.Create(new McpOptions()),
-            NullLogger<McpConnectionManager>.Instance);
+        var mgr = new Mock<IMcpConnectionManager>();
         mgr.Setup(m => m.GetStatuses()).Returns([
             ConnectedStatus("filesystem", 5),
             FailedStatus("github"),
@@ -104,9 +96,7 @@ public class McpPluginTests
     [Fact]
     public async Task ListTools_ServerNotConnected_ReturnsError()
     {
-        var mgr = new Mock<McpConnectionManager>(
-            Options.Create(new McpOptions()),
-            NullLogger<McpConnectionManager>.Instance);
+        var mgr = new Mock<IMcpConnectionManager>();
         mgr.Setup(m => m.GetClient("missing")).Returns((IMcpClient?)null);
 
         var plugin = CreatePlugin(mgr);
@@ -130,9 +120,7 @@ public class McpPluginTests
         clientMock.Setup(c => c.ListToolsAsync(It.IsAny<CancellationToken>()))
                   .ReturnsAsync(tools);
 
-        var mgr = new Mock<McpConnectionManager>(
-            Options.Create(new McpOptions()),
-            NullLogger<McpConnectionManager>.Instance);
+        var mgr = new Mock<IMcpConnectionManager>();
         mgr.Setup(m => m.GetClient("filesystem")).Returns(clientMock.Object);
 
         var plugin = CreatePlugin(mgr);
@@ -153,9 +141,7 @@ public class McpPluginTests
         clientMock.Setup(c => c.ListToolsAsync(It.IsAny<CancellationToken>()))
                   .ReturnsAsync([]);
 
-        var mgr = new Mock<McpConnectionManager>(
-            Options.Create(new McpOptions()),
-            NullLogger<McpConnectionManager>.Instance);
+        var mgr = new Mock<IMcpConnectionManager>();
         mgr.Setup(m => m.GetClient("empty")).Returns(clientMock.Object);
 
         var plugin = CreatePlugin(mgr);
@@ -169,9 +155,7 @@ public class McpPluginTests
     [Fact]
     public async Task CallTool_ServerNotConnected_ReturnsError()
     {
-        var mgr = new Mock<McpConnectionManager>(
-            Options.Create(new McpOptions()),
-            NullLogger<McpConnectionManager>.Instance);
+        var mgr = new Mock<IMcpConnectionManager>();
         mgr.Setup(m => m.GetClient("gone")).Returns((IMcpClient?)null);
 
         var plugin = CreatePlugin(mgr);
@@ -184,9 +168,7 @@ public class McpPluginTests
     public async Task CallTool_InvalidJson_ReturnsJsonError()
     {
         var clientMock = new Mock<IMcpClient>();
-        var mgr = new Mock<McpConnectionManager>(
-            Options.Create(new McpOptions()),
-            NullLogger<McpConnectionManager>.Instance);
+        var mgr = new Mock<IMcpConnectionManager>();
         mgr.Setup(m => m.GetClient("fs")).Returns(clientMock.Object);
 
         var plugin = CreatePlugin(mgr);
@@ -212,9 +194,7 @@ public class McpPluginTests
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(callResult);
 
-        var mgr = new Mock<McpConnectionManager>(
-            Options.Create(new McpOptions()),
-            NullLogger<McpConnectionManager>.Instance);
+        var mgr = new Mock<IMcpConnectionManager>();
         mgr.Setup(m => m.GetClient("test")).Returns(clientMock.Object);
 
         var plugin = CreatePlugin(mgr);
@@ -236,9 +216,7 @@ public class McpPluginTests
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(callResult);
 
-        var mgr = new Mock<McpConnectionManager>(
-            Options.Create(new McpOptions()),
-            NullLogger<McpConnectionManager>.Instance);
+        var mgr = new Mock<IMcpConnectionManager>();
         mgr.Setup(m => m.GetClient("test")).Returns(clientMock.Object);
 
         var plugin = CreatePlugin(mgr);
@@ -252,14 +230,11 @@ public class McpPluginTests
     [Fact]
     public async Task Reconnect_SuccessfulReconnect_ReturnsOk()
     {
-        var mgr = new Mock<McpConnectionManager>(
-            Options.Create(new McpOptions()),
-            NullLogger<McpConnectionManager>.Instance);
+        var mgr = new Mock<IMcpConnectionManager>();
         mgr.Setup(m => m.ReconnectAsync("filesystem", It.IsAny<CancellationToken>()))
            .ReturnsAsync(ConnectedStatus("filesystem", 5));
 
-        var kernelLoader = new Mock<McpKernelLoader>(
-            mgr.Object, NullLogger<McpKernelLoader>.Instance);
+        var kernelLoader = new Mock<IMcpKernelLoader>();
 
         var plugin = new McpPlugin(
             mgr.Object, kernelLoader.Object,
@@ -276,14 +251,11 @@ public class McpPluginTests
     [Fact]
     public async Task Reconnect_FailedReconnect_ReturnsError()
     {
-        var mgr = new Mock<McpConnectionManager>(
-            Options.Create(new McpOptions()),
-            NullLogger<McpConnectionManager>.Instance);
+        var mgr = new Mock<IMcpConnectionManager>();
         mgr.Setup(m => m.ReconnectAsync("flaky", It.IsAny<CancellationToken>()))
            .ReturnsAsync(FailedStatus("flaky"));
 
-        var kernelLoader = new Mock<McpKernelLoader>(
-            mgr.Object, NullLogger<McpKernelLoader>.Instance);
+        var kernelLoader = new Mock<IMcpKernelLoader>();
 
         var plugin = new McpPlugin(
             mgr.Object, kernelLoader.Object,
@@ -302,9 +274,7 @@ public class McpPluginTests
     [Fact]
     public async Task ListResources_ServerNotConnected_ReturnsError()
     {
-        var mgr = new Mock<McpConnectionManager>(
-            Options.Create(new McpOptions()),
-            NullLogger<McpConnectionManager>.Instance);
+        var mgr = new Mock<IMcpConnectionManager>();
         mgr.Setup(m => m.GetClient("gone")).Returns((IMcpClient?)null);
 
         var plugin = CreatePlugin(mgr);
@@ -330,9 +300,7 @@ public class McpPluginTests
         clientMock.Setup(c => c.ListResourcesAsync(It.IsAny<CancellationToken>()))
                   .ReturnsAsync(resources);
 
-        var mgr = new Mock<McpConnectionManager>(
-            Options.Create(new McpOptions()),
-            NullLogger<McpConnectionManager>.Instance);
+        var mgr = new Mock<IMcpConnectionManager>();
         mgr.Setup(m => m.GetClient("fs")).Returns(clientMock.Object);
 
         var plugin = CreatePlugin(mgr);
@@ -358,9 +326,7 @@ public class McpPluginTests
         clientMock.Setup(c => c.ReadResourceAsync("file:///test.md", It.IsAny<CancellationToken>()))
                   .ReturnsAsync(readResult);
 
-        var mgr = new Mock<McpConnectionManager>(
-            Options.Create(new McpOptions()),
-            NullLogger<McpConnectionManager>.Instance);
+        var mgr = new Mock<IMcpConnectionManager>();
         mgr.Setup(m => m.GetClient("fs")).Returns(clientMock.Object);
 
         var plugin = CreatePlugin(mgr);

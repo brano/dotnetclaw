@@ -26,8 +26,8 @@ namespace DotnetClaw.Plugins;
 ///   • List and read MCP resources (files, database rows, etc.)
 /// </summary>
 public sealed class McpPlugin(
-    DotnetClaw.Mcp.McpConnectionManager connectionManager,
-    DotnetClaw.Mcp.McpKernelLoader kernelLoader,
+    DotnetClaw.Mcp.IMcpConnectionManager connectionManager,
+    DotnetClaw.Mcp.IMcpKernelLoader kernelLoader,
     IOptions<McpOptions> mcpOptions,
     ILogger<McpPlugin> logger)
 {

@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>DotnetClaw.Gateway.Tests</name>
+    </assembly>
+    <members>
+        <member name="T:DotnetClaw.Gateway.Tests.Helpers.FakeWebSocket">
+            <summary>
+            A concrete, in-memory <see cref="T:System.Net.WebSockets.WebSocket"/> substitute for unit tests.
+            All <see cref="M:DotnetClaw.Gateway.Tests.Helpers.FakeWebSocket.SendAsync(System.ArraySegment{System.Byte},System.Net.WebSockets.WebSocketMessageType,System.Boolean,System.Threading.CancellationToken)"/> calls are captured in <see cref="P:DotnetClaw.Gateway.Tests.Helpers.FakeWebSocket.SentMessages"/>
+            in a thread-safe manner. All other abstract members are implemented as
+            no-ops or return sensible defaults.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.Gateway.Tests.Helpers.FakeWebSocket.SentMessages">
+            <summary>All raw byte payloads received via <see cref="M:DotnetClaw.Gateway.Tests.Helpers.FakeWebSocket.SendAsync(System.ArraySegment{System.Byte},System.Net.WebSockets.WebSocketMessageType,System.Boolean,System.Threading.CancellationToken)"/>.</summary>
+        </member>
+        <member name="M:DotnetClaw.Gateway.Tests.Helpers.FakeWebSocket.SetState(System.Net.WebSockets.WebSocketState)">
+            <summary>Allows tests to transition the socket state after construction.</summary>
+        </member>
+        <member name="M:DotnetClaw.Gateway.Tests.Helpers.FakeWebSocket.LastSentMessage">
+            <summary>
+            Deserialises the last captured message back to a <see cref="T:DotnetClaw.Gateway.GatewayMessage"/>
+            using the source-generated <see cref="T:DotnetClaw.Gateway.GatewayJsonContext"/>.
+            Returns <c>null</c> when no messages have been sent yet.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Gateway.Tests.WebGatewayClientServiceTests.DispatchAsync(DotnetClaw.Web.Gateway.WebGatewayClientService,DotnetClaw.Gateway.GatewayMessage)">
+            <summary>
+            Invokes the private <c>DispatchAsync(GatewayMessage)</c> method via reflection.
+            </summary>
+        </member>
+    </members>
+</doc>

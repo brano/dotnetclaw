@@ -25,7 +25,7 @@ namespace DotnetClaw.Browser;
 /// </summary>
 public sealed class BrowserSessionManager(
     IOptions<BrowserOptions> options,
-    ILogger<BrowserSessionManager> logger) : IHostedService, IAsyncDisposable
+    ILogger<BrowserSessionManager> logger) : IBrowserSessionManager, IHostedService, IAsyncDisposable
 {
     private readonly BrowserOptions _options = options.Value;
 

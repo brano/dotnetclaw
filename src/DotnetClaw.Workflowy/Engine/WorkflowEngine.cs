@@ -17,7 +17,7 @@ public sealed class WorkflowEngine(
     StepExecutor executor,
     PipelineDispatcher dispatcher,
     VariableResolver resolver,
-    ILogger<WorkflowEngine> logger)
+    ILogger<WorkflowEngine> logger) : IWorkflowEngine
 {
     private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = false };
 

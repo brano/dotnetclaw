@@ -211,6 +211,23 @@
         <member name="T:DotnetClaw.Browser.BrowserNavigateResult">
             <summary>Result of a browser navigation.</summary>
         </member>
+        <member name="T:DotnetClaw.Browser.IBrowserSessionManager">
+            <summary>
+            Abstraction over <see cref="T:DotnetClaw.Browser.BrowserSessionManager"/> to enable unit testing
+            without launching a real browser (Moq cannot mock sealed classes).
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Browser.IBrowserSessionManager.GetSessionAsync(System.Threading.CancellationToken)">
+             <summary>
+             Returns an <see cref="T:DotnetClaw.Browser.IBrowserSession"/> ready for use.
+            
+             In persistent mode the same underlying page is reused across calls.
+             In isolated mode a new page is created — the caller must dispose it.
+             </summary>
+        </member>
+        <member name="P:DotnetClaw.Browser.IBrowserSessionManager.IsRunning">
+            <summary>Whether the browser has been launched and is still connected.</summary>
+        </member>
         <member name="T:DotnetClaw.Browser.PlaywrightBrowserSession">
             <summary>
             Production <see cref="T:DotnetClaw.Browser.IBrowserSession"/> backed by a Playwright <see cref="T:Microsoft.Playwright.IPage"/>.
@@ -762,7 +779,7 @@
                playwright install chromium
              </summary>
         </member>
-        <member name="M:DotnetClaw.Plugins.BrowserPlugin.#ctor(DotnetClaw.Browser.BrowserSessionManager,DotnetClaw.Telegram.ITelegramBotClient,Microsoft.Extensions.Options.IOptions{DotnetClaw.Config.BrowserOptions},Microsoft.Extensions.Options.IOptions{DotnetClaw.Config.TelegramOptions},Microsoft.Extensions.Logging.ILogger{DotnetClaw.Plugins.BrowserPlugin})">
+        <member name="M:DotnetClaw.Plugins.BrowserPlugin.#ctor(DotnetClaw.Browser.IBrowserSessionManager,DotnetClaw.Telegram.ITelegramBotClient,Microsoft.Extensions.Options.IOptions{DotnetClaw.Config.BrowserOptions},Microsoft.Extensions.Options.IOptions{DotnetClaw.Config.TelegramOptions},Microsoft.Extensions.Logging.ILogger{DotnetClaw.Plugins.BrowserPlugin})">
              <summary>
              Browser skill — gives DotnetClaw a full headless browser via Playwright.
             
@@ -891,7 +908,7 @@
                • List and read MCP resources (files, database rows, etc.)
              </summary>
         </member>
-        <member name="M:DotnetClaw.Plugins.McpPlugin.#ctor(DotnetClaw.Mcp.McpConnectionManager,DotnetClaw.Mcp.McpKernelLoader,Microsoft.Extensions.Options.IOptions{DotnetClaw.Config.McpOptions},Microsoft.Extensions.Logging.ILogger{DotnetClaw.Plugins.McpPlugin})">
+        <member name="M:DotnetClaw.Plugins.McpPlugin.#ctor(DotnetClaw.Mcp.IMcpConnectionManager,DotnetClaw.Mcp.IMcpKernelLoader,Microsoft.Extensions.Options.IOptions{DotnetClaw.Config.McpOptions},Microsoft.Extensions.Logging.ILogger{DotnetClaw.Plugins.McpPlugin})">
              <summary>
              MCP management skill — lets the agent introspect and directly interact with
              connected MCP servers at the protocol level.
@@ -1206,6 +1223,39 @@
             needed by <see cref="T:DotnetClaw.Plugins.McpPlugin"/> and <see cref="T:DotnetClaw.Mcp.McpKernelLoader"/>.
             </summary>
         </member>
+        <member name="T:DotnetClaw.Mcp.IMcpConnectionManager">
+            <summary>
+            Abstraction over <see cref="T:DotnetClaw.Mcp.McpConnectionManager"/> to enable unit testing
+            without real MCP server connections (Moq cannot mock sealed classes).
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Mcp.IMcpConnectionManager.GetClient(System.String)">
+            <summary>Returns the <see cref="T:DotnetClaw.Mcp.IMcpClient"/> for a named server, or <c>null</c> if not connected.</summary>
+        </member>
+        <member name="P:DotnetClaw.Mcp.IMcpConnectionManager.AllClients">
+            <summary>All currently connected MCP clients, keyed by server name.</summary>
+        </member>
+        <member name="M:DotnetClaw.Mcp.IMcpConnectionManager.GetStatuses">
+            <summary>Snapshot of connection status for every configured MCP server.</summary>
+        </member>
+        <member name="M:DotnetClaw.Mcp.IMcpConnectionManager.ReconnectAsync(System.String,System.Threading.CancellationToken)">
+            <summary>Disconnect and reconnect a single named MCP server.</summary>
+        </member>
+        <member name="T:DotnetClaw.Mcp.IMcpKernelLoader">
+            <summary>
+            Abstraction over <see cref="T:DotnetClaw.Mcp.McpKernelLoader"/> to enable unit testing
+            without real Semantic Kernel / MCP infrastructure (Moq cannot mock sealed classes).
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Mcp.IMcpKernelLoader.LoadAsync(Microsoft.SemanticKernel.Kernel,System.Threading.CancellationToken)">
+            <summary>
+            Import all live MCP client tools into <paramref name="kernel"/> as plugins.
+            Safe to call multiple times — existing Mcp_ plugins are replaced.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Mcp.IMcpKernelLoader.ReloadServerAsync(System.String,Microsoft.SemanticKernel.Kernel,System.Threading.CancellationToken)">
+            <summary>Reload a single server's plugin after reconnect.</summary>
+        </member>
         <member name="T:DotnetClaw.Mcp.McpClientAdapter">
             <summary>
             Thin adapter that wraps the SDK <see cref="T:ModelContextProtocol.Client.McpClient"/> and implements
@@ -1287,7 +1337,7 @@
                converts MCP tool schemas → SK function metadata automatically.
              </summary>
         </member>
-        <member name="M:DotnetClaw.Mcp.McpKernelLoader.#ctor(DotnetClaw.Mcp.McpConnectionManager,Microsoft.Extensions.Logging.ILogger{DotnetClaw.Mcp.McpKernelLoader})">
+        <member name="M:DotnetClaw.Mcp.McpKernelLoader.#ctor(DotnetClaw.Mcp.IMcpConnectionManager,Microsoft.Extensions.Logging.ILogger{DotnetClaw.Mcp.McpKernelLoader})">
              <summary>
              Loads all connected MCP servers into the Semantic Kernel as named plugins.
             

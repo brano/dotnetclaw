@@ -1,0 +1,57 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       DotnetClaw.Gateway.Tests — xUnit unit tests for the WebSocket gateway
+       ═══════════════════════════════════════════════════════════════════════ -->
+
+  <PropertyGroup Label="Test Project Identity">
+    <RootNamespace>DotnetClaw.Gateway.Tests</RootNamespace>
+    <AssemblyName>DotnetClaw.Gateway.Tests</AssemblyName>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <NuGetPrunePackageReferences>false</NuGetPrunePackageReferences>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Test Behaviour">
+    <ParallelizeAssembly>true</ParallelizeAssembly>
+    <ParallelizeTestCollections>true</ParallelizeTestCollections>
+    <GenerateTestingPlatformEntryPoint>false</GenerateTestingPlatformEntryPoint>
+  </PropertyGroup>
+
+  <ItemGroup Label="xUnit Test Framework">
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup Label="Mocking">
+    <PackageReference Include="Moq" />
+  </ItemGroup>
+
+  <ItemGroup Label="Microsoft Extensions">
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Options" />
+  </ItemGroup>
+
+  <ItemGroup Label="Coverage">
+    <PackageReference Include="coverlet.collector">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="coverlet.msbuild">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup Label="Projects Under Test">
+    <!-- Core gateway source (GatewayConnectionManager, GatewayMessage, etc.) -->
+    <ProjectReference Include="..\..\src\DotnetClaw\DotnetClaw.csproj" />
+    <!-- Web gateway client (WebGatewayClientService) -->
+    <ProjectReference Include="..\..\src\DotnetClaw.Web\DotnetClaw.Web.csproj" />
+  </ItemGroup>
+
+</Project>

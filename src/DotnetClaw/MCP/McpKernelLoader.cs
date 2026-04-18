@@ -29,8 +29,8 @@ namespace DotnetClaw.Mcp;
 ///   converts MCP tool schemas → SK function metadata automatically.
 /// </summary>
 public sealed class McpKernelLoader(
-    McpConnectionManager connectionManager,
-    ILogger<McpKernelLoader> logger)
+    IMcpConnectionManager connectionManager,
+    ILogger<McpKernelLoader> logger) : IMcpKernelLoader
 {
     /// <summary>
     /// Import all live MCP client tools into <paramref name="kernel"/> as plugins.

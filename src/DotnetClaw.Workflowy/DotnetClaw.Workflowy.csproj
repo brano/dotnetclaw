@@ -24,10 +24,6 @@
     <PackageReference Include="YamlDotNet" />
   </ItemGroup>
 
-  <ItemGroup Label="Serialisation">
-    <PackageReference Include="System.Text.Json" />
-  </ItemGroup>
-
   <ItemGroup Label="Microsoft Extensions">
     <PackageReference Include="Microsoft.Extensions.Configuration" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" />

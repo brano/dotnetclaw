@@ -75,6 +75,7 @@ builder.Services
     .AddSingleton<StepExecutor>()
     .AddSingleton<PipelineDispatcher>()
     .AddSingleton<WorkflowEngine>()
+    .AddSingleton<IWorkflowEngine>(sp => sp.GetRequiredService<WorkflowEngine>())
     .AddSingleton<WorkflowyApprovalService>()
     .AddSingleton<IApprovalNotifier>(sp => sp.GetRequiredService<WorkflowyApprovalService>())
     .AddSingleton<WorkflowyPlugin>();
@@ -104,3 +105,6 @@ app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 app.Run();
+
+// Required for WebApplicationFactory<Program> in E2E tests
+public partial class Program { }

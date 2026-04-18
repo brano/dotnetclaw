@@ -18,7 +18,7 @@ namespace DotnetClaw.Jobby;
 ///   • Jobs are executed sequentially per tick (fire-and-forget across ticks)
 /// </summary>
 public sealed class CronService(
-    CronStore store,
+    ICronStore store,
     IJobExecutor executor,
     ILogger<CronService> logger) : IHostedService, IDisposable
 {

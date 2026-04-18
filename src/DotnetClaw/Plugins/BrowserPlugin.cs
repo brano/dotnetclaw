@@ -26,7 +26,7 @@ namespace DotnetClaw.Plugins;
 ///   playwright install chromium
 /// </summary>
 public sealed class BrowserPlugin(
-    BrowserSessionManager sessionManager,
+    IBrowserSessionManager sessionManager,
     ITelegramBotClient telegramClient,
     IOptions<BrowserOptions> browserOptions,
     IOptions<TelegramOptions> telegramOptions,

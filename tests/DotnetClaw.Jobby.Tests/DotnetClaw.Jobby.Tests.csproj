@@ -1,0 +1,54 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       DotnetClaw.Jobby.Tests — xUnit unit + integration tests for the job scheduler
+       ═══════════════════════════════════════════════════════════════════════ -->
+
+  <PropertyGroup Label="Test Project Identity">
+    <RootNamespace>DotnetClaw.Jobby.Tests</RootNamespace>
+    <AssemblyName>DotnetClaw.Jobby.Tests</AssemblyName>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <NuGetPrunePackageReferences>false</NuGetPrunePackageReferences>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Test Behaviour">
+    <ParallelizeAssembly>true</ParallelizeAssembly>
+    <ParallelizeTestCollections>true</ParallelizeTestCollections>
+    <GenerateTestingPlatformEntryPoint>false</GenerateTestingPlatformEntryPoint>
+  </PropertyGroup>
+
+  <ItemGroup Label="xUnit Test Framework">
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup Label="Mocking">
+    <PackageReference Include="Moq" />
+  </ItemGroup>
+
+  <ItemGroup Label="Microsoft Extensions">
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Options" />
+  </ItemGroup>
+
+  <ItemGroup Label="Coverage">
+    <PackageReference Include="coverlet.collector">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="coverlet.msbuild">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup Label="Projects Under Test">
+    <ProjectReference Include="..\..\src\DotnetClaw.Jobby\DotnetClaw.Jobby.csproj" />
+  </ItemGroup>
+
+</Project>

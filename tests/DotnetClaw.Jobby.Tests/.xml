@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>DotnetClaw.Jobby.Tests</name>
+    </assembly>
+    <members>
+        <member name="M:DotnetClaw.Jobby.Tests.CronServiceTests.InvokeTickAsync(DotnetClaw.Jobby.CronService)">
+            <summary>
+            Invokes the private <c>TickAsync</c> method via reflection so tests can
+            drive the scheduler without starting the background loop.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Jobby.Tests.CronServiceTests.InvokeComputeNextRun(System.String,System.DateTimeOffset)">
+            <summary>
+            Calls the internal static <c>CronService.ComputeNextRun</c> via reflection
+            so the test assembly does not need InternalsVisibleTo.
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.Jobby.Tests.CronStoreTests">
+             <summary>
+             Integration tests for <see cref="T:DotnetClaw.Jobby.CronStore"/>.
+            
+             Uses the internal test constructor via reflection so no InternalsVisibleTo
+             attribute is needed in the production project.
+             </summary>
+        </member>
+        <member name="M:DotnetClaw.Jobby.Tests.CronStoreTests.CreateStore">
+            <summary>
+            Instantiates <see cref="T:DotnetClaw.Jobby.CronStore"/> using the internal test constructor
+            via reflection, pointing at the per-test temp directory.
+            </summary>
+        </member>
+    </members>
+</doc>

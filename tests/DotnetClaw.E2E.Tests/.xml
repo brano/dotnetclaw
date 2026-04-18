@@ -1,0 +1,146 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>DotnetClaw.E2E.Tests</name>
+    </assembly>
+    <members>
+        <member name="T:DotnetClaw.E2E.Tests.BlazorWebFactory">
+            <summary>
+            <see cref="T:Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1"/> that starts a second Kestrel
+            host bound to a random loopback port alongside the in-memory TestServer.
+            This is required so that Playwright's Chromium instance — which runs as a
+            real OS process — can reach the Blazor app over a real TCP socket.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.E2E.Tests.BlazorWebFactory.ServerAddress">
+            <summary>
+            The base URL of the Kestrel server once started, e.g.
+            "http://127.0.0.1:54321". Use this as the root URL in Playwright tests.
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.E2E.Tests.BlazorWebE2ETests">
+             <summary>
+             Playwright end-to-end tests that launch a headless Chromium browser and
+             navigate the Blazor Server app via real HTTP requests to a Kestrel listener.
+            
+             Prerequisites:
+               pwsh bin/Debug/net10.0/playwright.ps1 install chromium
+             </summary>
+        </member>
+        <member name="M:DotnetClaw.E2E.Tests.BlazorWebE2ETests.HomePage_Loads_HasExpectedTitle">
+            <summary>
+            Verifies that the home/dashboard page loads successfully and includes
+            the application name "DotnetClaw" in the page title or visible heading.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.E2E.Tests.BlazorWebE2ETests.HomePage_Loads_NoJavaScriptErrors">
+            <summary>
+            Verifies that the home page loads without throwing any JavaScript errors
+            or unhandled exceptions in the browser context.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.E2E.Tests.BlazorWebE2ETests.ChatPage_Loads_HasChatInput">
+            <summary>
+            Verifies that the Chat page loads and renders a text input (or textarea)
+            that the user can type into to send messages.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.E2E.Tests.BlazorWebE2ETests.TasksPage_Loads_ShowsEmptyState">
+            <summary>
+            Verifies that the Tasks page loads without a 500 error and renders
+            visible page content (heading or empty-state message).
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.E2E.Tests.BlazorWebE2ETests.NotFoundPage_Returns404Content">
+            <summary>
+            Verifies that navigating to a non-existent route displays a user-friendly
+            404 / "not found" message rather than an unhandled error page.
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.E2E.Tests.GatewayWebSocketIntegrationTests">
+            <summary>
+            Integration tests for the WebSocket gateway wire protocol.
+            Each test connects to a lightweight in-process echo server
+            (<see cref="T:DotnetClaw.E2E.Tests.Helpers.GatewayTestServer"/>) that mirrors chat_message frames
+            as agent_response frames — no real agent loop required.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.E2E.Tests.GatewayWebSocketIntegrationTests.Connect_SendChatMessage_ReceivesAgentResponse">
+            <summary>
+            Verifies the basic round-trip: a chat_message sent to the server comes
+            back as an agent_response with the same text payload.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.E2E.Tests.GatewayWebSocketIntegrationTests.Connect_WithSessionId_ResponseHasSameSessionId">
+            <summary>
+            Verifies that the sessionId is preserved through the server round-trip:
+            the agent_response carries exactly the same sessionId that was sent.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.E2E.Tests.GatewayWebSocketIntegrationTests.SendMultipleMessages_AllReceiveResponses">
+            <summary>
+            Verifies that sending multiple chat messages sequentially results in a
+            corresponding agent_response for each one, with the correct text payload.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.E2E.Tests.GatewayWebSocketIntegrationTests.ConnectWithChannel_QueryParam_Accepted">
+            <summary>
+            Verifies that the server accepts connections that include a ?channel=
+            query parameter; the WebSocket handshake completes and the connection
+            is usable for a normal message exchange.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.E2E.Tests.GatewayWebSocketIntegrationTests.GatewayMessage_Serialization_RoundTrip">
+            <summary>
+            Pure unit test (lives here for convenience): verifies that
+            <see cref="T:DotnetClaw.Gateway.GatewayMessage"/> serialises to JSON via
+            <see cref="T:DotnetClaw.Gateway.GatewayJsonContext"/> and deserialises back with all
+            fields intact and matching.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.E2E.Tests.GatewayWebSocketIntegrationTests.ReceiveMessageAsync(System.Net.WebSockets.ClientWebSocket,System.Threading.CancellationToken)">
+            <summary>
+            Reads a complete WebSocket message (potentially spanning multiple frames)
+            and deserialises it as a <see cref="T:DotnetClaw.Gateway.GatewayMessage"/>.
+            Returns <c>null</c> when the server sends a Close frame.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.E2E.Tests.GatewayWebSocketIntegrationTests.SendMessageAsync(System.Net.WebSockets.ClientWebSocket,DotnetClaw.Gateway.GatewayMessage,System.Threading.CancellationToken)">
+            <summary>
+            Serialises <paramref name="msg"/> and sends it to <paramref name="socket"/>
+            as a single text frame.
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.E2E.Tests.Helpers.GatewayTestServer">
+            <summary>
+            Minimal in-process WebSocket gateway server for integration testing.
+            Routes: ws://127.0.0.1:{port}/ws
+            On receiving a chat_message, echoes back an agent_response with the same text
+            and sessionId, then sends a second agent_response to signal completion.
+            </summary>
+        </member>
+        <member name="P:DotnetClaw.E2E.Tests.Helpers.GatewayTestServer.BaseUrl">
+            <summary>HTTP base URL of the running server, e.g. "http://127.0.0.1:xxxx".</summary>
+        </member>
+        <member name="P:DotnetClaw.E2E.Tests.Helpers.GatewayTestServer.WebSocketUrl">
+            <summary>WebSocket endpoint URL, e.g. "ws://127.0.0.1:xxxx/ws".</summary>
+        </member>
+        <member name="M:DotnetClaw.E2E.Tests.Helpers.GatewayTestServer.StartAsync">
+            <summary>
+            Builds and starts a minimal ASP.NET Core app on a random loopback port.
+            The /ws endpoint accepts WebSocket upgrades and echoes responses for
+            chat_message frames.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.E2E.Tests.Helpers.GatewayTestServer.EchoLoopAsync(System.Net.WebSockets.WebSocket,System.Threading.CancellationToken)">
+            <summary>
+            Receive loop: reads one complete WebSocket message at a time.
+            For chat_message frames, sends back an agent_response with the same text
+            and sessionId. All other message types are silently ignored.
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.E2E.Tests.Helpers.GatewayTestServer.SendMessageAsync(System.Net.WebSockets.WebSocket,DotnetClaw.Gateway.GatewayMessage,System.Threading.CancellationToken)">
+            <summary>Serialises <paramref name="msg"/> and sends it as a single text frame.</summary>
+        </member>
+    </members>
+</doc>

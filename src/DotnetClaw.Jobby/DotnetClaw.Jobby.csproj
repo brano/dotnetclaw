@@ -26,8 +26,4 @@
     <PackageReference Include="Cronos" />
   </ItemGroup>
 
-  <ItemGroup Label="Serialisation">
-    <PackageReference Include="System.Text.Json" />
-  </ItemGroup>
-
 </Project>

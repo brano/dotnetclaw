@@ -1,0 +1,63 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       DotnetClaw.E2E.Tests — Playwright E2E + Gateway WebSocket integration tests
+       ═══════════════════════════════════════════════════════════════════════ -->
+
+  <PropertyGroup Label="Test Project Identity">
+    <RootNamespace>DotnetClaw.E2E.Tests</RootNamespace>
+    <AssemblyName>DotnetClaw.E2E.Tests</AssemblyName>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <NuGetPrunePackageReferences>false</NuGetPrunePackageReferences>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Test Behaviour">
+    <!-- E2E tests must run sequentially — shared browser / server state -->
+    <ParallelizeAssembly>false</ParallelizeAssembly>
+    <ParallelizeTestCollections>false</ParallelizeTestCollections>
+    <GenerateTestingPlatformEntryPoint>false</GenerateTestingPlatformEntryPoint>
+  </PropertyGroup>
+
+  <ItemGroup Label="xUnit Test Framework">
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup Label="Playwright Browser Automation">
+    <PackageReference Include="Microsoft.Playwright" />
+  </ItemGroup>
+
+  <ItemGroup Label="ASP.NET Core Test Host">
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+  </ItemGroup>
+
+  <ItemGroup Label="Microsoft Extensions">
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Options" />
+  </ItemGroup>
+
+  <ItemGroup Label="Coverage">
+    <PackageReference Include="coverlet.collector">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="coverlet.msbuild">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup Label="Projects Under Test">
+    <!-- DotnetClaw core (GatewayWebSocketHandler, GatewayConnectionManager) -->
+    <!-- Alias avoids CS0433: both DotnetClaw and DotnetClaw.Web emit a top-level Program class -->
+    <ProjectReference Include="..\..\src\DotnetClaw\DotnetClaw.csproj" Aliases="DotnetClawCore" />
+    <!-- DotnetClaw.Web (Blazor app — for Playwright page tests) -->
+    <ProjectReference Include="..\..\src\DotnetClaw.Web\DotnetClaw.Web.csproj" />
+  </ItemGroup>
+
+</Project>

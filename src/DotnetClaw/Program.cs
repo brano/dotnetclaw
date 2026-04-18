@@ -92,12 +92,15 @@ builder.Services
     .AddHostedService<TelegramPollingService>()
     // Browser (Playwright)
     .AddSingleton<BrowserSessionManager>()
+    .AddSingleton<IBrowserSessionManager>(sp => sp.GetRequiredService<BrowserSessionManager>())
     .AddHostedService(sp => sp.GetRequiredService<BrowserSessionManager>())
     .AddSingleton<BrowserPlugin>()
     // MCP (Model Context Protocol)
     .AddSingleton<McpConnectionManager>()
+    .AddSingleton<IMcpConnectionManager>(sp => sp.GetRequiredService<McpConnectionManager>())
     .AddHostedService(sp => sp.GetRequiredService<McpConnectionManager>())
     .AddSingleton<McpKernelLoader>()
+    .AddSingleton<IMcpKernelLoader>(sp => sp.GetRequiredService<McpKernelLoader>())
     .AddSingleton<McpPlugin>()
     // ── Workflowy Workflow Engine ─────────────────────────────────────────
     .Configure<WorkflowyOptions>(
@@ -113,10 +116,12 @@ builder.Services
     .AddSingleton<StepExecutor>()
     .AddSingleton<PipelineDispatcher>()
     .AddSingleton<WorkflowEngine>()
+    .AddSingleton<IWorkflowEngine>(sp => sp.GetRequiredService<WorkflowEngine>())
     .AddSingleton<IApprovalNotifier, NoOpApprovalNotifier>()
     .AddSingleton<WorkflowyPlugin>()
     // ── Jobby (background job scheduler) ─────────────────────────────────────
     .AddSingleton<CronStore>()
+    .AddSingleton<ICronStore>(sp => sp.GetRequiredService<CronStore>())
     .AddSingleton<IJobExecutor, ClawJobExecutor>()
     .AddSingleton<JobbyPlugin>()
     .AddSingleton<CronService>()

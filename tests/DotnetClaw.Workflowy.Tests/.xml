@@ -4,9 +4,22 @@
         <name>DotnetClaw.Workflowy.Tests</name>
     </assembly>
     <members>
+        <member name="T:DotnetClaw.Workflowy.Tests.WorkflowEngineAdditionalTests">
+            <summary>
+            Additional integration tests for WorkflowEngine using a real SQLite DB in a temp file.
+            Covers multi-step runs, conditions, approval gates, resume paths, failure modes, and arg
+            variable resolution.
+            </summary>
+        </member>
         <member name="T:DotnetClaw.Workflowy.Tests.WorkflowEngineTests">
             <summary>
             Integration tests for WorkflowEngine using a real SQLite DB in a temp file.
+            </summary>
+        </member>
+        <member name="T:DotnetClaw.Workflowy.Tests.WorkflowyPluginTests">
+            <summary>
+            Unit tests for WorkflowyPlugin. Uses hand-written fakes for IWorkflowEngine and
+            IApprovalNotifier — Moq is not available in this test project.
             </summary>
         </member>
     </members>

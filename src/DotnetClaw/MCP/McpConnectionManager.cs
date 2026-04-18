@@ -39,7 +39,7 @@ public sealed record McpServerStatus
 /// </summary>
 public sealed class McpConnectionManager(
     IOptions<McpOptions> options,
-    ILogger<McpConnectionManager> logger) : IHostedService, IAsyncDisposable
+    ILogger<McpConnectionManager> logger) : IMcpConnectionManager, IHostedService, IAsyncDisposable
 {
     private readonly McpOptions _options = options.Value;
 

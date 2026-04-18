@@ -32,6 +32,24 @@
         <member name="P:DotnetClaw.Workflowy.Config.WorkflowyOptions.ResolvedDatabasePath">
             <summary>Resolved absolute path to the database file (expands ~).</summary>
         </member>
+        <member name="T:DotnetClaw.Workflowy.Engine.IWorkflowEngine">
+            <summary>
+            Abstraction over <see cref="T:DotnetClaw.Workflowy.Engine.WorkflowEngine"/> to enable unit testing of
+            <c>WorkflowyPlugin</c> without a real database (Moq cannot mock sealed classes).
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Workflowy.Engine.IWorkflowEngine.RunAsync(System.String,System.Collections.Generic.Dictionary{System.String,System.String},System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Starts a new workflow run from a file path.
+            Returns a response with status "ok", "needs_approval", or "error".
+            </summary>
+        </member>
+        <member name="M:DotnetClaw.Workflowy.Engine.IWorkflowEngine.ResumeAsync(System.String,System.Boolean,System.Threading.CancellationToken)">
+            <summary>
+            Resumes a workflow paused at an approval gate.
+            Pass <paramref name="approved"/>=true to continue, false to cancel.
+            </summary>
+        </member>
         <member name="T:DotnetClaw.Workflowy.Engine.PipelineDispatcher">
              <summary>
              Handles pipeline: directives in workflow steps.
@@ -239,7 +257,7 @@
              Both functions return a serialized WorkflowyResponse JSON envelope.
              </summary>
         </member>
-        <member name="M:DotnetClaw.Workflowy.Plugin.WorkflowyPlugin.#ctor(DotnetClaw.Workflowy.Engine.WorkflowEngine,DotnetClaw.Workflowy.Plugin.IApprovalNotifier,Microsoft.Extensions.Logging.ILogger{DotnetClaw.Workflowy.Plugin.WorkflowyPlugin})">
+        <member name="M:DotnetClaw.Workflowy.Plugin.WorkflowyPlugin.#ctor(DotnetClaw.Workflowy.Engine.IWorkflowEngine,DotnetClaw.Workflowy.Plugin.IApprovalNotifier,Microsoft.Extensions.Logging.ILogger{DotnetClaw.Workflowy.Plugin.WorkflowyPlugin})">
              <summary>
              Semantic Kernel plugin that exposes Workflowy workflow execution to the DotnetClaw agent.
             

@@ -7,19 +7,17 @@ namespace DotnetClaw.Jobby;
 
 /// <summary>
 /// Reads and writes the job list from/to a JSON file under
-/// <c>~/.dotnetclaw/cron/jobs.json</c>.
+/// <c>~/.dotnetclaw/cron/jobs.json</c> (or a custom directory for tests).
 ///
 /// Thread-safety: all public methods are async and serialise access with a
 /// <see cref="SemaphoreSlim"/> so the CronService and plugin can both write safely.
 /// </summary>
-public sealed class CronStore(ILogger<CronStore> logger)
+public sealed class CronStore : ICronStore
 {
-    private static readonly string StoreDir =
+    private static readonly string DefaultStoreDir =
         Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
             ".dotnetclaw", "cron");
-
-    private static readonly string StoreFile = Path.Combine(StoreDir, "jobs.json");
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -27,7 +25,24 @@ public sealed class CronStore(ILogger<CronStore> logger)
         Converters = { new JsonStringEnumConverter() },
     };
 
+    private readonly string _storeDir;
+    private readonly string _storeFile;
+    private readonly ILogger<CronStore> _logger;
     private readonly SemaphoreSlim _lock = new(1, 1);
+
+    /// <summary>Production constructor — uses <c>~/.dotnetclaw/cron/</c>.</summary>
+    public CronStore(ILogger<CronStore> logger) : this(logger, null) { }
+
+    /// <summary>
+    /// Test constructor — uses <paramref name="storeBaseDir"/> so tests can
+    /// write to a temp directory instead of the real user profile.
+    /// </summary>
+    internal CronStore(ILogger<CronStore> logger, string? storeBaseDir)
+    {
+        _logger    = logger;
+        _storeDir  = storeBaseDir ?? DefaultStoreDir;
+        _storeFile = Path.Combine(_storeDir, "jobs.json");
+    }
 
     // ── Public API ────────────────────────────────────────────────────────────
 
@@ -63,7 +78,7 @@ public sealed class CronStore(ILogger<CronStore> logger)
                 jobs.Add(job);
 
             await WriteAsync(jobs, ct);
-            logger.LogDebug("Saved job {Id} ({Name})", job.Id, job.Name);
+            _logger.LogDebug("Saved job {Id} ({Name})", job.Id, job.Name);
         }
         finally
         {
@@ -81,7 +96,7 @@ public sealed class CronStore(ILogger<CronStore> logger)
             if (removed > 0)
             {
                 await WriteAsync(jobs, ct);
-                logger.LogInformation("Deleted job {Id}", id);
+                _logger.LogInformation("Deleted job {Id}", id);
                 return true;
             }
             return false;
@@ -96,25 +111,25 @@ public sealed class CronStore(ILogger<CronStore> logger)
 
     private async Task<List<JobRecord>> ReadAsync(CancellationToken ct)
     {
-        if (!File.Exists(StoreFile))
+        if (!File.Exists(_storeFile))
             return [];
 
         try
         {
-            var json = await File.ReadAllTextAsync(StoreFile, ct);
+            var json = await File.ReadAllTextAsync(_storeFile, ct);
             return JsonSerializer.Deserialize<List<JobRecord>>(json, JsonOptions) ?? [];
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Failed to read job store at {Path}. Starting fresh.", StoreFile);
+            _logger.LogWarning(ex, "Failed to read job store at {Path}. Starting fresh.", _storeFile);
             return [];
         }
     }
 
     private async Task WriteAsync(List<JobRecord> jobs, CancellationToken ct)
     {
-        Directory.CreateDirectory(StoreDir);
+        Directory.CreateDirectory(_storeDir);
         var json = JsonSerializer.Serialize(jobs, JsonOptions);
-        await File.WriteAllTextAsync(StoreFile, json, ct);
+        await File.WriteAllTextAsync(_storeFile, json, ct);
     }
 }
