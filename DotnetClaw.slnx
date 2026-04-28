@@ -15,7 +15,11 @@
 
   <!-- ── Test Projects ───────────────────────────────────────────────────── -->
   <Folder Name="/tests/" Description="Automated test projects">
+    <Project Path="tests/DotnetClaw.E2E.Tests/DotnetClaw.E2E.Tests.csproj" />
+    <Project Path="tests/DotnetClaw.Gateway.Tests/DotnetClaw.Gateway.Tests.csproj" />
+    <Project Path="tests/DotnetClaw.Jobby.Tests/DotnetClaw.Jobby.Tests.csproj" />
     <Project Path="tests/DotnetClaw.Tests/DotnetClaw.Tests.csproj" />
+    <Project Path="tests/DotnetClaw.Workflowy.Tests/DotnetClaw.Workflowy.Tests.csproj" />
   </Folder>
   <Folder Name="/plans/">
     <File Path="plans/workflowy-plan.md" />
